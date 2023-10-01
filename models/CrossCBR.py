@@ -252,7 +252,7 @@ class CrossCBR(nn.Module):
         # [bs, 1+neg_num, emb_size]
         IL_bundles_feature, BL_bundles_feature = bundles_feature
         # [bs, 1+neg_num]
-        pred = torch.sum(IL_users_feature * IL_bundles_feature, 2) + torch.sum(BL_users_feature * BL_bundles_feature, 2)
+        pred = torch.cat((IL_users_feature, BL_users_feature),1) + torch.cat((IL_bundles_feature,BL_bundles_feature),1)
         # pred = self.predict(users_feature, bundles_feature)
         bpr_loss = cal_bpr_loss(pred)
 
