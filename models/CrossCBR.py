@@ -283,7 +283,7 @@ class CrossCBR(nn.Module):
         bundles_embedding = [i[bundles] for i in bundles_feature]
 
         bpr_loss, c_loss = self.cal_loss(users_embedding, bundles_embedding)
-        hard_loss = self.regularize(users_embedding, bundles_embedding)
+        #hard_loss = self.regularize(users_embedding, bundles_embedding)
 
         return bpr_loss, c_loss
 
