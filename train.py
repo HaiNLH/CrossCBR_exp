@@ -309,5 +309,5 @@ def get_ndcg(pred, grd, is_hit, topk):
     return [nomina, denorm]
 
 
-if _name_ == "_main_":
+if __name__ == "_main_":
     main()
