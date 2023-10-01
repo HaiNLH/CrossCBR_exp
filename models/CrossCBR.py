@@ -211,7 +211,7 @@ class CrossCBR(nn.Module):
             BL_users_feature, BL_bundles_feature = self.one_propagate(self.bundle_level_graph_ori, self.users_feature, self.bundles_feature, self.bundle_level_dropout, test)
         else:
             BL_users_feature, BL_bundles_feature = self.one_propagate(self.bundle_level_graph, self.users_feature, self.bundles_feature, self.bundle_level_dropout, test)
-
+        # ============================= multi intent propagation =============================
         users_feature = [IL_users_feature, BL_users_feature]
         bundles_feature = [IL_bundles_feature, BL_bundles_feature]
 
@@ -274,9 +274,18 @@ class CrossCBR(nn.Module):
         bundles_embedding = [i[bundles] for i in bundles_feature]
 
         bpr_loss, c_loss = self.cal_loss(users_embedding, bundles_embedding)
+        hard_loss = self.regularize(users_embedding, bundles_embedding)
 
-        return bpr_loss, c_loss
+        return hard_loss, c_loss
 
+    #Hard negative
+    def regularize(self, users_feature, bundles_feature):
+        users_feature_atom, users_feature_non_atom = users_feature # batch_n_f
+        bundles_feature_atom, bundles_feature_non_atom = bundles_feature # batch_n_f
+        hard_loss = self.embed_L2_norm * \
+            ((users_feature_atom ** 2).sum() + (bundles_feature_atom ** 2).sum() +\
+            (users_feature_non_atom ** 2).sum() + (bundles_feature_non_atom ** 2).sum())
+        return hard_loss
 
     def evaluate(self, propagate_result, users):
         users_feature, bundles_feature = propagate_result
