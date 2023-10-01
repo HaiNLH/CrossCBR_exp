@@ -137,7 +137,7 @@ def main():
                 loss = bpr_loss + conf["c_lambda"] * c_loss
                 print('this is new: ')
                 print(loss)
-                loss.backward()
+                loss.sum().backward()
                 optimizer.step()
 
                 loss_scalar = loss.detach()
