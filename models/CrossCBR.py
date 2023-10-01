@@ -8,7 +8,7 @@ import scipy.sparse as sp
 
 
 def cal_bpr_loss(pred):
-    pred: [bs, 1+neg_num]
+    #pred: [bs, 1+neg_num]
     if pred.shape[1] > 2:
         negs = pred[:, 1:]
         pos = pred[:, 0].unsqueeze(1).expand_as(negs)
@@ -254,7 +254,7 @@ class CrossCBR(nn.Module):
         # [bs, 1+neg_num]
         pred = torch.cat((IL_users_feature, BL_users_feature),1) + torch.cat((IL_bundles_feature,BL_bundles_feature),1)
         # pred = self.predict(users_feature, bundles_feature)
-        bpr_loss = cal_bpr_loss(F.normalize(pred, p = 2, dim = -1))
+        bpr_loss = cal_bpr_loss(F.normalize(pred, p = 2, dim =-1))
 
         # cl is abbr. of "contrastive loss"
         u_cross_view_cl = self.cal_c_loss(IL_users_feature, BL_users_feature)
