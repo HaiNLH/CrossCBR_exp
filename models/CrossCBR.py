@@ -254,7 +254,7 @@ class CrossCBR(nn.Module):
         # [bs, 1+neg_num]
         pred = torch.cat((IL_users_feature, BL_users_feature),1) + torch.cat((IL_bundles_feature,BL_bundles_feature),1)
         # pred = self.predict(users_feature, bundles_feature)
-        bpr_loss = cal_bpr_loss(pred)
+        bpr_loss = cal_bpr_loss(F.normalize(pred, p = 2, dim = -1))
 
         # cl is abbr. of "contrastive loss"
         u_cross_view_cl = self.cal_c_loss(IL_users_feature, BL_users_feature)
