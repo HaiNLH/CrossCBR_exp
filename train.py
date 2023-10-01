@@ -135,7 +135,8 @@ def main():
                     ED_drop = True
                 bpr_loss, c_loss = model(batch, ED_drop=ED_drop)
                 loss = bpr_loss + conf["c_lambda"] * c_loss
-                print('this is new' + loss)
+                print('this is new: ')
+                print(loss)
                 loss.backward()
                 optimizer.step()
 
