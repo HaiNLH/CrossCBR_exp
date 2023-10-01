@@ -240,7 +240,7 @@ class CrossCBR(nn.Module):
         return c_loss
     def predict(self, users_feature, bundles_features):
         users_feature_atom, users_feature_non_atom, = users_feature
-        bundles_feature_atom, bundles_feature_atom = bundles_feature_atom
+        bundles_feature_atom, bundles_feature_atom = bundles_feature
         pred = torch.sum(users_feature_atom * bundles_feature_atom,2) \
             + torch.sum(users_feature_non_atom * bundles_feature_non_atom,2)
         return pred
@@ -288,13 +288,6 @@ class CrossCBR(nn.Module):
         return bpr_loss, c_loss
 
     #Hard negative
-    def regularize(self, users_feature, bundles_feature):
-        users_feature_atom, users_feature_non_atom = users_feature # batch_n_f
-        bundles_feature_atom, bundles_feature_non_atom = bundles_feature # batch_n_f
-        hard_loss = self.embed_L2_norm * \
-            ((users_feature_atom ** 2).sum() + (bundles_feature_atom ** 2).sum() +\
-            (users_feature_non_atom ** 2).sum() + (bundles_feature_non_atom ** 2).sum())
-        return hard_loss
 
     def evaluate(self, propagate_result, users):
         users_feature, bundles_feature = propagate_result
