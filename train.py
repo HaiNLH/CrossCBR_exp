@@ -239,7 +239,7 @@ def test(model, dataloader, conf):
     for users, ground_truth_u_b, train_mask_u_b in dataloader:
         pred_b = model.evaluate(rs, users.to(device))
         pred_b -= 1e8 * train_mask_u_b.to(device)
-        tmp_metrics = get_metrics(tmp_metrics, ground_truth_u_b, pred_b, conf["topk"]).to(self.device)
+        tmp_metrics = get_metrics(tmp_metrics, ground_truth_u_b, pred_b, conf["topk"]).to('cuda')
 
     metrics = {}
     for m, topk_res in tmp_metrics.items():
@@ -283,27 +283,27 @@ def get_recall(pred, grd, is_hit, topk):
 def get_ndcg(pred, grd, is_hit, topk):
     def DCG(hit, topk, device):
         hit = hit/torch.log2(torch.arange(2, topk+2, device=device, dtype=torch.float))
-        return hit.sum(-1)
+        return hit.sum(-1).to(self.device)
 
     def IDCG(num_pos, topk, device):
         hit = torch.zeros(topk, dtype=torch.float)
         hit[:num_pos] = 1
-        return DCG(hit, topk, device)
+        return DCG(hit, topk, device).to(self.device)
 
     device = grd.device
-    IDCGs = torch.empty(1+topk, dtype=torch.float)
+    IDCGs = torch.empty(1+topk, dtype=torch.float).to(self.device)
     IDCGs[0] = 1  # avoid 0/0
     for i in range(1, topk+1):
-        IDCGs[i] = IDCG(i, topk, device)
+        IDCGs[i] = IDCG(i, topk, device).to(self.device)
 
-    num_pos = grd.sum(dim=1).clamp(0, topk).to(torch.long)
-    dcg = DCG(is_hit, topk, device)
+    num_pos = grd.sum(dim=1).clamp(0, topk).to(torch.long).to(self.device)
+    dcg = DCG(is_hit, topk, device).to(self.device)
 
-    idcg = IDCGs[num_pos]
-    ndcg = dcg/idcg.to(self.device)
+    idcg = IDCGs[num_pos].to(self.device)
+    ndcg = dcg/idcg.to(self.device).to(self.device)
 
     denorm = pred.shape[0] - (num_pos == 0).sum().item()
-    nomina = ndcg.sum().item()
+    nomina = ndcg.sum().item().to(self.device)
 
     return [nomina, denorm]
 
