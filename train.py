@@ -149,7 +149,7 @@ def main():
 
                 if (batch_anchor+1) % test_interval_bs == 0:  
                     metrics = {}
-                    metrics["val"] = test(model, dataset.val_loader, conf)
+                    metrics["val"] = test(model, dataset.val_loader, conf).to(self.device)
                     metrics["test"] = test(model, dataset.test_loader, conf)
                     best_metrics, best_perform, best_epoch = log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch)
 
@@ -239,7 +239,7 @@ def test(model, dataloader, conf):
     for users, ground_truth_u_b, train_mask_u_b in dataloader:
         pred_b = model.evaluate(rs, users.to(device))
         pred_b -= 1e8 * train_mask_u_b.to(device)
-        tmp_metrics = get_metrics(tmp_metrics, ground_truth_u_b, pred_b, conf["topk"])
+        tmp_metrics = get_metrics(tmp_metrics, ground_truth_u_b, pred_b, conf["topk"]).to(self.device)
 
     metrics = {}
     for m, topk_res in tmp_metrics.items():
@@ -255,7 +255,7 @@ def get_metrics(metrics, grd, pred, topks):
     for topk in topks:
         _, col_indice = torch.topk(pred, topk)
         row_indice = torch.zeros_like(col_indice) + torch.arange(pred.shape[0], device=pred.device, dtype=torch.long).view(-1, 1)
-        is_hit = grd[row_indice.view(-1), col_indice.view(-1)].view(-1, topk)
+        is_hit = grd[row_indice.view(-1), col_indice.view(-1)].view(-1, topk).to(self.device)
 
         tmp["recall"][topk] = get_recall(pred, grd, is_hit, topk)
         tmp["ndcg"][topk] = get_ndcg(pred, grd, is_hit, topk)
