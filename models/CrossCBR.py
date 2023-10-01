@@ -9,16 +9,19 @@ import scipy.sparse as sp
 
 def cal_bpr_loss(pred):
     # pred: [bs, 1+neg_num]
-    if pred.shape[1] > 2:
-        negs = pred[:, 1:]
-        pos = pred[:, 0].unsqueeze(1).expand_as(negs)
-    else:
-        negs = pred[:, 1].unsqueeze(1)
-        pos = pred[:, 0].unsqueeze(1)
+    # if pred.shape[1] > 2:
+    #     negs = pred[:, 1:]
+    #     pos = pred[:, 0].unsqueeze(1).expand_as(negs)
+    # else:
+    #     negs = pred[:, 1].unsqueeze(1)
+    #     pos = pred[:, 0].unsqueeze(1)
 
-    loss = - torch.log(torch.sigmoid(pos - negs)) # [bs]
-    loss = torch.mean(loss)
+    # loss = - torch.log(torch.sigmoid(pos - negs)) # [bs]
+    # loss = torch.mean(loss)
 
+    #from BGCN
+    loss = -torch.log(torch.sigmoid(pred[:,0] - pred[:,1]))
+    
     return loss
 
 
@@ -235,7 +238,12 @@ class CrossCBR(nn.Module):
         c_loss = - torch.mean(torch.log(pos_score / ttl_score))
 
         return c_loss
-
+    def predict(self, users_feature, bundles_features):
+        users_feature_atom, users_feature_non_atom, = users_feature
+        bundles_feature_atom, bundles_feature_atom = bundles_feature_atom
+        pred = torch.sum(users_feature_atom * bundles_feature_atom,2) \
+            + torch.sum(users_feature_non_atom * bundles_feature_non_atom,2)
+        return pred
 
     def cal_loss(self, users_feature, bundles_feature):
         # IL: item_level, BL: bundle_level
@@ -244,7 +252,8 @@ class CrossCBR(nn.Module):
         # [bs, 1+neg_num, emb_size]
         IL_bundles_feature, BL_bundles_feature = bundles_feature
         # [bs, 1+neg_num]
-        pred = torch.sum(IL_users_feature * IL_bundles_feature, 2) + torch.sum(BL_users_feature * BL_bundles_feature, 2)
+        # pred = torch.sum(IL_users_feature * IL_bundles_feature, 2) + torch.sum(BL_users_feature * BL_bundles_feature, 2)
+        pred = self.predict(users_feature, bundles_feature)
         bpr_loss = cal_bpr_loss(pred)
 
         # cl is abbr. of "contrastive loss"
@@ -276,7 +285,7 @@ class CrossCBR(nn.Module):
         bpr_loss, c_loss = self.cal_loss(users_embedding, bundles_embedding)
         hard_loss = self.regularize(users_embedding, bundles_embedding)
 
-        return hard_loss, c_loss
+        return bpr_loss, c_loss
 
     #Hard negative
     def regularize(self, users_feature, bundles_feature):
