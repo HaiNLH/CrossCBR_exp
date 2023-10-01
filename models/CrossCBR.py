@@ -17,7 +17,7 @@ def cal_bpr_loss(pred):
         pos = pred[:, 0].unsqueeze(1)
 
     loss = - torch.log(torch.sigmoid(pos - negs)) # [bs]
-    loss = torch.sum(loss)
+    loss = torch.mean(loss)
 
     #from BGCN
     # loss = -torch.log(torch.sigmoid(pred[:,0] - pred[:,1]))
