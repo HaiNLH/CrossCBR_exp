@@ -147,9 +147,10 @@ def main():
 
                 pbar.set_description("epoch: %d, loss: %.4f, bpr_loss: %.4f, c_loss: %.4f" %(epoch, loss_scalar, bpr_loss_scalar, c_loss_scalar))
 
-                if (batch_anchor+1) % test_interval_bs == 0:  
+                if (batch_anchor+1) % test_interval_bs == 0:
+                    print('\n')
                     metrics = {}
-                    metrics["val"] = test(model, dataset.val_loader, conf).to(self.device)
+                    metrics["val"] = test(model, dataset.val_loader, conf)
                     metrics["test"] = test(model, dataset.test_loader, conf)
                     best_metrics, best_perform, best_epoch = log_metrics(conf, model, metrics, run, log_path, checkpoint_model_path, checkpoint_conf_path, epoch, batch_anchor, best_metrics, best_perform, best_epoch)
 
@@ -239,7 +240,7 @@ def test(model, dataloader, conf):
     for users, ground_truth_u_b, train_mask_u_b in dataloader:
         pred_b = model.evaluate(rs, users.to(device))
         pred_b -= 1e8 * train_mask_u_b.to(device)
-        tmp_metrics = get_metrics(tmp_metrics, ground_truth_u_b, pred_b, conf["topk"]).to('cuda')
+        tmp_metrics = get_metrics(tmp_metrics, ground_truth_u_b, pred_b, conf["topk"])
 
     metrics = {}
     for m, topk_res in tmp_metrics.items():
@@ -255,17 +256,17 @@ def get_metrics(metrics, grd, pred, topks):
     for topk in topks:
         _, col_indice = torch.topk(pred, topk)
         row_indice = torch.zeros_like(col_indice) + torch.arange(pred.shape[0], device=pred.device, dtype=torch.long).view(-1, 1)
-        is_hit = grd[row_indice.view(-1), col_indice.view(-1)].view(-1, topk).to(self.device)
+        is_hit = grd[row_indice.view(-1).to(grd.device), col_indice.view(-1).to(grd.device)].view(-1, topk)
 
-        tmp["recall"][topk] = get_recall(pred, grd, is_hit, topk).to(self.device)
-        tmp["ndcg"][topk] = get_ndcg(pred, grd, is_hit, topk).to(self.device)
+        tmp["recall"][topk] = get_recall(pred, grd, is_hit, topk)
+        tmp["ndcg"][topk] = get_ndcg(pred, grd, is_hit, topk)
 
     for m, topk_res in tmp.items():
         for topk, res in topk_res.items():
             for i, x in enumerate(res):
                 metrics[m][topk][i] += x
 
-    return metrics.to(self.device)
+    return metrics
 
 
 def get_recall(pred, grd, is_hit, topk):
@@ -283,30 +284,30 @@ def get_recall(pred, grd, is_hit, topk):
 def get_ndcg(pred, grd, is_hit, topk):
     def DCG(hit, topk, device):
         hit = hit/torch.log2(torch.arange(2, topk+2, device=device, dtype=torch.float))
-        return hit.sum(-1).to(self.device)
+        return hit.sum(-1)
 
     def IDCG(num_pos, topk, device):
         hit = torch.zeros(topk, dtype=torch.float)
         hit[:num_pos] = 1
-        return DCG(hit, topk, device).to(self.device)
+        return DCG(hit, topk, device)
 
     device = grd.device
-    IDCGs = torch.empty(1+topk, dtype=torch.float).to(self.device)
+    IDCGs = torch.empty(1+topk, dtype=torch.float)
     IDCGs[0] = 1  # avoid 0/0
     for i in range(1, topk+1):
-        IDCGs[i] = IDCG(i, topk, device).to(self.device)
+        IDCGs[i] = IDCG(i, topk, device)
 
-    num_pos = grd.sum(dim=1).clamp(0, topk).to(torch.long).to(self.device)
-    dcg = DCG(is_hit, topk, device).to(self.device)
+    num_pos = grd.sum(dim=1).clamp(0, topk).to(torch.long)
+    dcg = DCG(is_hit, topk, device)
 
-    idcg = IDCGs[num_pos].to(self.device)
-    ndcg = dcg/idcg.to(self.device).to(self.device)
+    idcg = IDCGs[num_pos]
+    ndcg = dcg/idcg.to(device)
 
     denorm = pred.shape[0] - (num_pos == 0).sum().item()
-    nomina = ndcg.sum().item().to(self.device)
+    nomina = ndcg.sum().item()
 
     return [nomina, denorm]
 
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     main()
