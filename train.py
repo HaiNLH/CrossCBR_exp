@@ -257,15 +257,15 @@ def get_metrics(metrics, grd, pred, topks):
         row_indice = torch.zeros_like(col_indice) + torch.arange(pred.shape[0], device=pred.device, dtype=torch.long).view(-1, 1)
         is_hit = grd[row_indice.view(-1), col_indice.view(-1)].view(-1, topk).to(self.device)
 
-        tmp["recall"][topk] = get_recall(pred, grd, is_hit, topk)
-        tmp["ndcg"][topk] = get_ndcg(pred, grd, is_hit, topk)
+        tmp["recall"][topk] = get_recall(pred, grd, is_hit, topk).to(self.device)
+        tmp["ndcg"][topk] = get_ndcg(pred, grd, is_hit, topk).to(self.device)
 
     for m, topk_res in tmp.items():
         for topk, res in topk_res.items():
             for i, x in enumerate(res):
                 metrics[m][topk][i] += x
 
-    return metrics
+    return metrics.to(self.device)
 
 
 def get_recall(pred, grd, is_hit, topk):
@@ -300,7 +300,7 @@ def get_ndcg(pred, grd, is_hit, topk):
     dcg = DCG(is_hit, topk, device)
 
     idcg = IDCGs[num_pos]
-    ndcg = dcg/idcg.to(device)
+    ndcg = dcg/idcg.to(self.device)
 
     denorm = pred.shape[0] - (num_pos == 0).sum().item()
     nomina = ndcg.sum().item()
