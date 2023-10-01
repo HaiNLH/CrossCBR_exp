@@ -141,14 +141,14 @@ def main():
                 loss.backward()
                 optimizer.step()
 
-                loss_scalar = loss.detach()
-                bpr_loss_scalar = bpr_loss.detach()
-                c_loss_scalar = c_loss.detach()
-                run.add_scalar("loss_bpr", bpr_loss_scalar, batch_anchor)
-                run.add_scalar("loss_c", c_loss_scalar, batch_anchor)
-                run.add_scalar("loss", loss_scalar, batch_anchor)
+                # loss_scalar = loss.detach()
+                # bpr_loss_scalar = bpr_loss.detach()
+                # c_loss_scalar = c_loss.detach()
+                # run.add_scalar("loss_bpr", bpr_loss_scalar, batch_anchor)
+                # run.add_scalar("loss_c", c_loss_scalar, batch_anchor)
+                # run.add_scalar("loss", loss_scalar, batch_anchor)
 
-                pbar.set_description("epoch: %d, loss: %.4f, bpr_loss: %.4f, c_loss: %.4f" %(epoch, loss_scalar, bpr_loss_scalar, c_loss_scalar))
+                pbar.set_description("epoch: %d, loss: %.4f" %(epoch, loss))
 
                 if (batch_anchor+1) % test_interval_bs == 0:
                     print('\n')
