@@ -238,7 +238,7 @@ class CrossCBR(nn.Module):
         c_loss = - torch.mean(torch.log(pos_score / ttl_score))
 
         return c_loss
-    def predict(self, users_feature, bundles_features):
+    def predict(self, users_feature, bundles_feature):
         users_feature_atom, users_feature_non_atom, = users_feature
         bundles_feature_atom, bundles_feature_atom = bundles_feature
         pred = torch.sum(users_feature_atom * bundles_feature_atom,2) \
