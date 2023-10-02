@@ -250,7 +250,7 @@ class CrossCBR(nn.Module):
 
         # [bs, 1+neg_num]
         pred = torch.sum(IL_users_feature * IL_bundles_feature, 2) + torch.sum(BL_users_feature * BL_bundles_feature, 2)
-        print(pred.shape)
+        #print(pred.shape)
         bpr_loss = cal_bpr_loss(pred)
 
         # cl is abbr. of "contrastive loss"
