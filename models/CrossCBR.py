@@ -241,6 +241,9 @@ class CrossCBR(nn.Module):
         # IL: item_level, BL: bundle_level
         # [bs, 1, emb_size]
         IL_users_feature, BL_users_feature = users_feature
+        print(IL_users_feature.shape, BL_users_feature.shape)
+        print("\nBUNDLE SIZE\n")
+        print(IL_bundles_feature.shape, BL_bundles_feature.shape)
         # [bs, 1+neg_num, emb_size]
         IL_bundles_feature, BL_bundles_feature = bundles_feature
         # [bs, 1+neg_num]
