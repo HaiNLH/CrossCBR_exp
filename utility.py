@@ -36,18 +36,21 @@ class BundleTrainDataset(Dataset):
     def __getitem__(self, index):
         conf = self.conf
         user_b, pos_bundle = self.u_b_pairs[index]
-        neg_bundles = self.u_b_for_neg_sample[user_b][:self.neg_sample]
+        all_bundles = [pos_bundle]
         # while True:
         #     i = np.random.randint(self.num_bundles)
         #     if self.u_b_graph[user_b, i] == 0 and not i in all_bundles:                                                          
         #         all_bundles.append(i)                                                                                                   
         #         if len(all_bundles) == self.neg_sample+1:                                                                               
         #             break
-        while len(neg_bundles) < self.neg_sample:
-            i = np.random.randint(self.num_bundles)
-            if self.u_b_graph[user_b, i] == 0 and i not in neg_bundles:
-                neg_bundles.append(i)                                          
-        all_bundles = [pos_bundle] + neg_bundles
+        while True:
+            i = np.random.randint(self.u_b_for_neg_sample.shape[1])
+            b_n1 = self.u_b_for_neg_sample[user_b, i]
+            if self.ground_truth_u_b[user_b, b_n1] == 0 and not b_n1 in all_bundles:
+                all_bundles.append(b_n1)
+                if len(all_bundles) == self.neg_sample+1:
+                    break
+                                                      
         return torch.LongTensor([user_b]), torch.LongTensor(all_bundles)
 
 
@@ -128,7 +131,7 @@ class Datasets():
         b_b_for_neg_sample = np.argsort(b_b_from_i, axis=1)[:, bn2_window[0]:bn2_window[1]]
 
         return u_b_for_neg_sample, b_b_for_neg_sample
-        
+
     def get_bi(self):
         with open(os.path.join(self.path, self.name, 'bundle_item.txt'), 'r') as f:
             b_i_pairs = list(map(lambda s: tuple(int(i) for i in s[:-1].split('\t')), f.readlines()))
