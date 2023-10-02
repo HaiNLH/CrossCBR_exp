@@ -24,6 +24,11 @@ Youshu:
 
   epochs: 100 # number of epochs to train
   test_interval: 5 # by how many epochs to run the validation and testing.
+  ## hard negative sample and further train
+  #'sample': 'simple',
+    #  'sample': 'hard',
+  hard_window: [0.7, 1.0], # top 30%
+  hard_prob: [0.4, 0.4], # probability 0.8
 
 
 NetEase:
