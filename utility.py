@@ -36,15 +36,18 @@ class BundleTrainDataset(Dataset):
     def __getitem__(self, index):
         conf = self.conf
         user_b, pos_bundle = self.u_b_pairs[index]
-        all_bundles = [pos_bundle]
-
-        while True:
+        neg_bundles = self.u_b_for_neg_sample[user_b][:self.neg_sample]
+        # while True:
+        #     i = np.random.randint(self.num_bundles)
+        #     if self.u_b_graph[user_b, i] == 0 and not i in all_bundles:                                                          
+        #         all_bundles.append(i)                                                                                                   
+        #         if len(all_bundles) == self.neg_sample+1:                                                                               
+        #             break
+        while len(neg_bundles) < self.neg_sample:
             i = np.random.randint(self.num_bundles)
-            if self.u_b_graph[user_b, i] == 0 and not i in all_bundles:                                                          
-                all_bundles.append(i)                                                                                                   
-                if len(all_bundles) == self.neg_sample+1:                                                                               
-                    break                                                                                                               
-
+            if self.u_b_graph[user_b, i] == 0 and i not in neg_bundles:
+                neg_bundles.append(i)                                          
+        all_bundles = [pos_bundle] + neg_bundles
         return torch.LongTensor([user_b]), torch.LongTensor(all_bundles)
 
 
@@ -92,7 +95,7 @@ class Datasets():
         u_b_pairs_val, u_b_graph_val = self.get_ub("tune")
         u_b_pairs_test, u_b_graph_test = self.get_ub("test")
 
-        u_b_for_neg_sample, b_b_for_neg_sample = None, None
+        u_b_for_neg_sample, b_b_for_neg_sample = self.get_aux_graph(u_i_graph, b_i_graph, conf)
 
         self.bundle_train_data = BundleTrainDataset(conf, u_b_pairs_train, u_b_graph_train, self.num_bundles, u_b_for_neg_sample, b_b_for_neg_sample, conf["neg_num"])
         self.bundle_val_data = BundleTestDataset(u_b_pairs_val, u_b_graph_val, u_b_graph_train, self.num_users, self.num_bundles)
