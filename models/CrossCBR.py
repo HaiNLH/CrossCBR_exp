@@ -244,7 +244,8 @@ class CrossCBR(nn.Module):
         pred = torch.sum(users_feature_atom * bundles_feature_atom,2) \
             + torch.sum(users_feature_non_atom * bundles_feature_non_atom,2)
         return pred
-
+    #Đang chỉnh embdedding feature (ft embedding ko có size 2048 2 64 )
+    # Phần sum là nhân element wise 2 feature embedding (gốc)
     def cal_loss(self, users_feature, bundles_feature):
         # IL: item_level, BL: bundle_level
         # [bs, 1, emb_size]
