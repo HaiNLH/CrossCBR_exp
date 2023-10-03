@@ -247,6 +247,8 @@ class CrossCBR(nn.Module):
     def norm(self, feature):
         min_val = torch.min(feature)
         max_val = torch.max(feature)
+        print(min_val,max_val)
+        print("\n_________________________check_________________________\n")
         norm_tensor = (feature - min_val) / (feature - min_val)
     
         # dim_norm = 2
@@ -265,10 +267,10 @@ class CrossCBR(nn.Module):
         # [bs, 1+neg_num]
         # pred = torch.sum(IL_users_feature * IL_bundles_feature, 2) + torch.sum(BL_users_feature * BL_bundles_feature, 2)
 
-        pred = torch.sum((torch.cat((IL_users_feature, BL_users_feature),2)* torch.cat((IL_bundles_feature,(BL_bundles_feature)),2)),2)
+        pred = torch.sum((torch.cat((self.norm(IL_users_feature), self.norm(BL_users_feature)),2)* torch.cat((self.norm(IL_bundles_feature),self.norm(BL_bundles_feature)),2)),2)
 
         # pred = self.predict(users_feature, bundles_feature)
-        bpr_loss = cal_bpr_loss(F.normalize(pred, p=2, dim=1))
+        bpr_loss = cal_bpr_loss(pred)
 
         # cl is abbr. of "contrastive loss"
         u_cross_view_cl = self.cal_c_loss(IL_users_feature, BL_users_feature)
