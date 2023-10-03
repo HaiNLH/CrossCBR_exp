@@ -43,14 +43,31 @@ class BundleTrainDataset(Dataset):
         #         all_bundles.append(i)                                                                                                   
         #         if len(all_bundles) == self.neg_sample+1:                                                                               
         #             break
-        while True:
-            i = np.random.randint(self.u_b_for_neg_sample.shape[1])
-            b_n1 = self.u_b_for_neg_sample[user_b, i]
-            if self.u_b_graph[user_b, b_n1] == 0 and not b_n1 in all_bundles:
-                all_bundles.append(b_n1)
-                if len(all_bundles) == self.neg_sample+1:
-                    break
-
+        hard_probability = round(np.random.uniform(0, 1), 1)
+        if  hard_probability <= conf['hard_prob'][0]:
+            while True:
+                i = np.random.randint(self.u_b_for_neg_sample.shape[1])
+                b_n1 = self.u_b_for_neg_sample[user_b, i]
+                if self.ground_truth_u_b[user_b, b_n1] == 0 and not b_n1 in all_bundles:
+                    all_bundles.append(b_n1)
+                    if len(all_bundles) == self.neg_sample+1:
+                        break
+        elif conf['hard_prob'][0] < hard_probability \
+            <= conf['hard_prob'][0] + conf['hard_prob'][1]:
+            while True:
+                i = np.random.randint(self.b_b_for_neg_sample.shape[1])
+                b_n2 = self.b_b_for_neg_sample[pos_bundle, i]
+                if self.ground_truth_u_b[user_b, b_n2] == 0 and not b_n2 in all_bundles:
+                    all_bundles.append(b_n2)
+                    if len(all_bundles) == self.neg_sample+1:
+                        break
+        else:
+            while True:
+                i = np.random.randint(self.num_bundles)
+                if self.ground_truth_u_b[user_b, i] == 0 and not i in all_bundles:
+                    all_bundles.append(i)
+                    if len(all_bundles) == self.neg_sample+1:
+                        break
         return torch.LongTensor([user_b]), torch.LongTensor(all_bundles)
 
 
