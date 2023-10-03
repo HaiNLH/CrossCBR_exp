@@ -4,11 +4,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import scipy.sparse as sp 
 import torch_sparse
 from torch_sparse import SparseTensor
-from torch_sparse.mul import mul
-from torch.nn.parameter import Parameter
-import scipy.sparse as sp 
 
 
 def cal_bpr_loss(pred):
@@ -47,56 +45,6 @@ def np_edge_dropout(values, dropout_ratio):
     mask = np.random.choice([0, 1], size=(len(values),), p=[dropout_ratio, 1-dropout_ratio])
     values = mask * values
     return values
-
-class Info(object):
-    '''
-    [FOR `utils.logger`]
-
-    the base class that packing all hyperparameters and infos used in the related model
-    '''
-
-    def __init__(self, embedding_size, embed_L2_norm):
-        assert isinstance(embedding_size, int) and embedding_size > 0
-        self.embedding_size = embedding_size
-        assert embed_L2_norm >= 0
-        self.embed_L2_norm = embed_L2_norm
-
-    def get_title(self):
-        dct = self.__dict__
-        if '_info' in dct:
-            dct.pop('_info')
-        return '\t'.join(map(lambda x: dct[x].get_title() if isinstance(dct[x], Info) else x, dct.keys()))
-
-    def get_csv_title(self):
-        return self.get_title().replace('\t', ', ')
-
-    def __getitem__(self, key):
-        if hasattr(self, '_info'):
-            return self._info[key]
-        else:
-            return self.__getattribute__(key)
-
-    def __str__(self):
-        dct = self.__dict__
-        if '_info' in dct:
-            dct.pop('_info')
-        return '\t'.join(map(str, dct.values()))
-
-    def get_line(self):
-        return self.__str__()
-
-    def get_csv_line(self):
-        return self.get_line().replace('\t', ', ')
-# class CrossCBR_Info(Info):
-#     def __init__(self, embedding_size, embed_L2_norm, mess_dropout, node_dropout, num_layers, act=nn.LeakyReLU()):
-#         super().__init__(embedding_size, embed_L2_norm)
-#         self.act = act
-#         assert 1 > mess_dropout >= 0
-#         self.mess_dropout = mess_dropout
-#         assert 1 > node_dropout >= 0
-#         self.node_dropout = node_dropout
-#         assert isinstance(num_layers, int) and num_layers > 0
-#         self.num_layers = num_layers
 
 class CrossCBR(nn.Module):
     def get_infotype(self):
@@ -173,7 +121,7 @@ class CrossCBR(nn.Module):
         nn.init.xavier_normal_(self.bundles_feature)
         self.items_feature = nn.Parameter(torch.FloatTensor(self.num_items, self.embedding_size))
         nn.init.xavier_normal_(self.items_feature)
-        
+
     def init_md_dropouts(self):
         self.item_level_dropout = nn.Dropout(self.conf["item_level_ratio"], True)
         self.bundle_level_dropout = nn.Dropout(self.conf["bundle_level_ratio"], True)
