@@ -247,7 +247,7 @@ class CrossCBR(nn.Module):
     def norm(self, feature):
         in_val = torch.min(feature)
         max_val = torch.max(feature)
-        norm_tensor = (feautre - min_val) / (feature - min_val)
+        norm_tensor = (feature - min_val) / (feature - min_val)
     
         # dim_norm = 2
         # min_vals, _ = torch.min(feature, dim=dim_norm, keepdim=True)
