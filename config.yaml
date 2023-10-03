@@ -7,7 +7,7 @@ Youshu:
   
   # search hyperparameters
   # the following are the best settings
-  aug_type: "OP" # options: ED, MD, OP
+  aug_type: "ED" # options: ED, MD, OP
   ed_interval: 1 # by how many epochs to dropout edge, default is 1
   embedding_sizes: [64] # the embedding size for user, bundle, and item
   num_layerss: [1] # number of layers for the infomation progagation over the item- and bundle-level graphs
@@ -27,7 +27,7 @@ Youshu:
   ## hard negative sample and further train
   #'sample': 'simple',
   #  'sample': 'hard',
-  hard_window: [0.7, 1.0] # top 30%
+  hard_window: [0.6, 1.0] # top 40%
   hard_prob: [0.4, 0.4] # probability 0.8
 
 
