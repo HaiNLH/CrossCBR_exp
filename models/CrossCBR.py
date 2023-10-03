@@ -114,13 +114,9 @@ class CrossCBR(nn.Module):
         self.num_items = conf["num_items"]
         self.init_emb()
 
-        emb_dim = int(int(self.embedding_size) / self.n_factors)
-        self.init_emb(emb_dim)
-    
         assert isinstance(raw_graph, list)
-        ub_graph, ui_graph, bi_graph = raw_graph
         self.ub_graph, self.ui_graph, self.bi_graph = raw_graph
-    
+
         # generate the graph without any dropouts for testing
         self.get_item_level_graph_ori()
         self.get_bundle_level_graph_ori()
@@ -169,9 +165,15 @@ class CrossCBR(nn.Module):
         self.bi_aggregate_graph = self.get_aggregation_graph(self.bi_graph)
         self.ui_aggregate_graph_ori = self.get_aggregation_graph(self.ui_graph, 0)
         self.bi_aggregate_graph_ori = self.get_aggregation_graph(self.bi_graph, 0)
-        print('init success')
 
-
+    def init_emb(self):
+        self.users_feature = nn.Parameter(torch.FloatTensor(self.num_users, self.embedding_size))
+        nn.init.xavier_normal_(self.users_feature)
+        self.bundles_feature = nn.Parameter(torch.FloatTensor(self.num_bundles, self.embedding_size))
+        nn.init.xavier_normal_(self.bundles_feature)
+        self.items_feature = nn.Parameter(torch.FloatTensor(self.num_items, self.embedding_size))
+        nn.init.xavier_normal_(self.items_feature)
+        
     def init_md_dropouts(self):
         self.item_level_dropout = nn.Dropout(self.conf["item_level_ratio"], True)
         self.bundle_level_dropout = nn.Dropout(self.conf["bundle_level_ratio"], True)
