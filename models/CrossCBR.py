@@ -244,6 +244,17 @@ class CrossCBR(nn.Module):
         pred = torch.sum(users_feature_atom * bundles_feature_atom,2) \
             + torch.sum(users_feature_non_atom * bundles_feature_non_atom,2)
         return pred
+    def norm(self, feature):
+        # in_val = torch.min(tensor)
+        # max_val = torch.max(tensor)
+        # normalized_tensor = (tensor - min_val) / (max_val - min_val)
+    
+        dim_norm = 2
+        min_vals, _ = torch.min(feature, dim=dim_norm, keepdim=True)
+        max_vals, _ = torch.max(feature, dim=dim_norm, keepdim=True)
+        norm_tensor = (feature - min_vals) / (feature - min_vals)
+        return norm_tensor
+        # return F.normalize(feature, p=2, dim=2)
 
     def cal_loss(self, users_feature, bundles_feature):
         # IL: item_level, BL: bundle_level
