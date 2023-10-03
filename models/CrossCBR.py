@@ -245,7 +245,7 @@ class CrossCBR(nn.Module):
             + torch.sum(users_feature_non_atom * bundles_feature_non_atom,2)
         return pred
     def norm(self, feature):
-        in_val = torch.min(feature)
+        min_val = torch.min(feature)
         max_val = torch.max(feature)
         norm_tensor = (feature - min_val) / (feature - min_val)
     
