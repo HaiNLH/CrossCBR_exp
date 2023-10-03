@@ -112,122 +112,15 @@ class CrossCBR(nn.Module):
         self.num_users = conf["num_users"]
         self.num_bundles = conf["num_bundles"]
         self.num_items = conf["num_items"]
-        self.n_factors = 4
-        self.n_layers = 3
-        self.num_layers = 2
-        self.n_iterations = 2
+        self.init_emb()
 
         emb_dim = int(int(self.embedding_size) / self.n_factors)
         self.init_emb(emb_dim)
-        
-        # self.items_feature_each = nn.Parameter(
-        #     torch.FloatTensor(self.num_items, emb_dim)).to(device)
-        # nn.init.xavier_normal_(self.items_feature_each)
-        # self.items_feature = torch.cat([self.items_feature_each for i in range(self.n_factors)], dim=1).to(device)
-
+    
         assert isinstance(raw_graph, list)
         ub_graph, ui_graph, bi_graph = raw_graph
         self.ub_graph, self.ui_graph, self.bi_graph = raw_graph
-        
-        ### From MIDGN
-        
-        ui_graph_coo, ub_graph_coo, bi_graph_coo = ui_graph.tocoo(), ub_graph.tocoo(),bi_graph.tocoo()
-        ub_indices = torch.tensor([ub_graph_coo.row, ub_graph_coo.col], dtype=torch.long)
-        ub_values = torch.ones(ub_graph_coo.data.shape, dtype=torch.float)
-        bi_indices = torch.tensor([bi_graph_coo.row, bi_graph_coo.col], dtype=torch.long)
-        bi_values = torch.ones(bi_graph_coo.data.shape, dtype=torch.float)
-        ui_e_indices, ui_e_values = torch_sparse.spspmm(ub_indices, ub_values, bi_indices, bi_values, self.num_users,
-                                                        self.num_bundles, self.num_items)
-
-        ui_graph_e = sp.csr_matrix((np.array([1] * len(ui_e_values)), (ui_e_indices[0].numpy(), ui_e_indices[1].numpy())),
-            shape=(self.num_users, self.num_items))
-        ui_graph_e_coo = ui_graph_e.tocoo()
-        ui_graph_e_coo = ui_graph_e.tocoo()
-        self.ui_mask = ui_graph_e[ui_graph_coo.row, ui_graph_coo.col]
-        self.ui_e_mask = ui_graph[ui_graph_e_coo.row, ui_graph_e_coo.col]
-        self.bi_graph, self.ui_graph = bi_graph, ui_graph
-        ub_sparse = torch.sparse_coo_tensor(ub_indices, ub_values, ub_graph.shape)
-        bi_sparse = torch.sparse_coo_tensor(bi_indices, bi_values, bi_graph.shape)
-
-        # user-item graph (items from bundles users had interacted with)
-        ubi_graph = self.get_ubi_non_weighted(ub_sparse, bi_sparse)
-        # item-item graph each cell is the number of times item i and j appeared at a same bundle 
-        self.ii_graph = bi_sparse.T @ bi_sparse 
-
-        if ui_graph.shape == (self.num_users, self.num_items):
-            # add self-loop
-            atom_graph = sp.bmat([[sp.identity(ui_graph.shape[0]), ui_graph],
-                                  [ui_graph.T, sp.identity(ui_graph.shape[1])]])
-        else:
-            raise ValueError(r"raw_graph's shape is wrong")
-        self.ui_atom_graph = to_tensor(laplace_transform(atom_graph)).to(device)
-        if bi_graph.shape == (self.num_bundles, self.num_items):
-            # add self-loop
-            atom_graph = sp.bmat([[sp.identity(bi_graph.shape[0]), bi_graph],
-                                  [bi_graph.T, sp.identity(bi_graph.shape[1])]])
-        else:
-            raise ValueError(r"raw_graph's shape is wrong")
-        self.bi_atom_graph = to_tensor(laplace_transform(atom_graph)).to(device)
-        self.dnns_atom = nn.ModuleList([nn.Linear(
-            self.embedding_size, self.embedding_size) for l in range(self.num_layers)])
-        
-        if bi_graph.shape == (self.num_bundles, self.num_items):
-            tmp = bi_graph.tocoo()
-            self.bi_graph_h = list(tmp.row)
-            self.bi_graph_t = list(tmp.col)
-            self.bi_graph_shape = bi_graph.shape
-        else:
-            raise ValueError(r"raw_graph's shape is wrong")
-
-        if ui_graph.shape == (self.num_users, self.num_items):
-            # add self-loop
-            tmp = ui_graph.tocoo()
-            self.ui_graph_v = torch.tensor(tmp.data, dtype=torch.float).to(device)
-            self.ui_graph_h = list(tmp.row)
-            self.ui_graph_t = list(tmp.col)
-            self.ui_graph_shape = ui_graph.shape
-        else:
-            raise ValueError(r"raw_graph's shape is wrong")
-        
-        if ub_graph.shape == (self.num_users, self.num_bundles):
-            # add self-loop
-            tmp = ub_graph.tocoo()
-            self.ub_graph_v = torch.tensor(tmp.data, dtype=torch.float).to(device)
-            self.ub_graph_h = list(tmp.row)
-            self.ub_graph_t = list(tmp.col)
-            self.ub_graph_shape = ub_graph.shape
-        else:
-            raise ValueError(r"raw_graph's shape is wrong")
-
-        #  deal with weights
-        bi_norm = sp.diags(1 / (np.sqrt((bi_graph.multiply(bi_graph)).sum(axis=1).A.ravel()) + 1e-8)) @ bi_graph
-        bb_graph = bi_norm @ bi_norm.T
-
-        bundle_size = bi_graph.sum(axis=1) + 1e-8
-        bi_graph = sp.diags(1 / bundle_size.A.ravel()) @ bi_graph
-
-        if ub_graph.shape == (self.num_users, self.num_bundles) \
-                and bb_graph.shape == (self.num_bundles, self.num_bundles):
-            # add self-loop
-            non_atom_graph = sp.bmat([[sp.identity(ub_graph.shape[0]), ub_graph],
-                                      [ub_graph.T, bb_graph]])
-        else:
-            raise ValueError(r"raw_graph's shape is wrong")
-        self.non_atom_graph = to_tensor(laplace_transform(non_atom_graph)).to(device)
-        print('finish generating non-atom graph')
-        # self.act = self.info.act
-        # self.num_layers = self.info.num_layers
-        # self.device = device
-
-        #  Dropouts
-        # self.mess_dropout = nn.Dropout(self.info.mess_dropout, True)
-        # self.node_dropout = nn.Dropout(self.info.node_dropout, True)
-
-        # Layers
-        self.dnns_non_atom = nn.ModuleList([nn.Linear(
-            self.embedding_size, self.embedding_size) for l in range(self.num_layers)])
-        
-        ### MIDGN
+    
         # generate the graph without any dropouts for testing
         self.get_item_level_graph_ori()
         self.get_bundle_level_graph_ori()
@@ -242,6 +135,41 @@ class CrossCBR(nn.Module):
 
         self.num_layers = self.conf["num_layers"]
         self.c_temp = self.conf["c_temp"]
+        self.MIDGN_weight = self.conf["MIDGN_weight"]
+
+        # MIDGN graph
+        temp = self.bi_graph.tocoo()
+        self.bi_graph_h = list(temp.row)
+        self.bi_graph_t = list(temp.col)
+        self.bi_graph_shape = self.bi_graph.shape
+        temp = self.ui_graph.tocoo()
+        self.ui_graph_h = list(temp.row)
+        self.ui_graph_t = list(temp.col)
+        self.ui_graph_shape = self.ui_graph.shape
+        temp = self.ub_graph.tocoo()
+        self.ub_graph_h = list(temp.row)
+        self.ub_graph_t = list(temp.col)
+        self.ub_graph_shape = self.ub_graph.shape
+
+        bi_norm = sp.diags(1 / (np.sqrt((self.bi_graph.multiply(self.bi_graph)).sum(axis=1).A.ravel()) + 1e-8)) @ self.bi_graph
+        bb_graph = bi_norm @ bi_norm.T
+        temp = sp.bmat([[sp.identity(self.ub_graph.shape[0]), self.ub_graph],
+                                      [self.ub_graph.T, bb_graph]])
+        self.ub_mat = to_tensor(laplace_transform(temp)).to(device)
+
+        self.mess_dropout = nn.Dropout(0.3, True)
+        self.node_dropout = nn.Dropout(0, True)
+        
+        self.n_iterations = 2
+        del bb_graph
+        del temp
+
+        #MIDGN aggregate
+        self.ui_aggregate_graph = self.get_aggregation_graph(self.ui_graph)
+        self.bi_aggregate_graph = self.get_aggregation_graph(self.bi_graph)
+        self.ui_aggregate_graph_ori = self.get_aggregation_graph(self.ui_graph, 0)
+        self.bi_aggregate_graph_ori = self.get_aggregation_graph(self.bi_graph, 0)
+        print('init success')
 
 
     def init_md_dropouts(self):
@@ -330,6 +258,16 @@ class CrossCBR(nn.Module):
         bi_graph = sp.diags(1/bundle_size.A.ravel()) @ bi_graph
         self.bundle_agg_graph_ori = to_tensor(bi_graph).to(device)
 
+    def get_aggregation_graph(self, bipartite_graph, edge_drop=0.1):
+        if edge_drop != 0:
+            if self.conf["aug_type"] == "ED":
+                graph = bipartite_graph.tocoo()
+                values = np_edge_dropout(graph.data, edge_drop)
+                bipartite_graph = sp.coo_matrix((values, (graph.row, graph.col)), shape=graph.shape).tocsr()
+
+        bundle_size = bipartite_graph.sum(axis=1) + 1e-8
+        bipartite_graph = sp.diags(1/bundle_size.A.ravel()) @ bipartite_graph
+        return to_tensor(bipartite_graph).to(self.device)
 
     def one_propagate(self, graph, A_feature, B_feature, mess_dropout, test):
         features = torch.cat((A_feature, B_feature), 0)
@@ -362,55 +300,28 @@ class CrossCBR(nn.Module):
             IL_bundles_feature = self.bundle_agg_dropout(IL_bundles_feature)
 
         return IL_bundles_feature
-    # def ub_propagate(self, graph, A_feature, B_feature):
-    #     # node dropout on graph
-    #     # indices = graph._indices()
-    #     # values = graph._values()
-    #     # values = self.node_dropout(values)
-    #     # graph = torch.sparse.FloatTensor(
-    #     #     indices, values, size=graph.shape)
+    def ub_propagate(self, graph, A_feature, B_feature):
+        # node dropout on graph
+        indices = graph._indices()
+        values = graph._values()
+        values = self.node_dropout(values)
+        graph = torch.sparse.FloatTensor(
+            indices, values, size=graph.shape)
 
-    #     # propagate
-    #     features = torch.cat((A_feature, B_feature), 0)
+        # propagate
+        features = torch.cat((A_feature, B_feature), 0)
 
-    #     all_features = torch.matmul(graph, features)
-    #     # all_features=torch.mean(all_features,dim=1,keepdims=False)
-    #     A_feature, B_feature = torch.split(
-    #         all_features, (A_feature.shape[0], B_feature.shape[0]), 0)
-    #     return A_feature, B_feature
+        all_features = torch.matmul(graph, features)
+        # all_features=torch.mean(all_features,dim=1,keepdims=False)
+        A_feature, B_feature = torch.split(
+            all_features, (A_feature.shape[0], B_feature.shape[0]), 0)
+        return A_feature, B_feature
 
-    def propagate(self, test=False):  #Cần xem lại logic đoạn này vì trong MIDGN chia U-I và B-I và 2 phần này đều là item view trong Cross CBR - trong CrossCBR có thêm phần bundle view U-B
+    def propagate(self, test=False):  
         #  =============================  item level propagation  =============================
         if test:
             IL_users_feature, IL_items_feature = self.one_propagate(self.item_level_graph_ori, self.users_feature, self.items_feature, self.item_level_dropout, test)
-            TL_bundles_feature, TL_item_feature_bundle, self.bi_avalues = self._create_star_routing_embed_with_p(self.bi_graph_h,
-                                                                                                     self.bi_graph_t,
-                                                                                                     self.bundles_feature,
-                                                                                                     self.items_feature,
-                                                                                                     self.num_bundles,
-                                                                                                     self.num_items,
-                                                                                                     self.bi_graph_shape,
-                                                                                                     n_factors=1,
-                                                                                                     pick_=False)
-            TL_user_feature, TL_item_feature_user, self.ui_avalues = self._create_star_routing_embed_with_p(self.ui_graph_h,
-                                                                                                   self.ui_graph_t,
-                                                                                                   self.users_feature,
-                                                                                                   self.items_feature,
-                                                                                                   self.num_users,
-                                                                                                   self.num_items,
-                                                                                                   self.ui_graph_shape,
-                                                                                                   n_factors=self.n_factors,
-                                                                                                   pick_=False)
         else:
-            TL_bundles_feature, TL_item_feature_bundle, self.bi_avalues = self._create_star_routing_embed_with_p(self.bi_graph_h,
-                                                                                                     self.bi_graph_t,
-                                                                                                     self.bundles_feature,
-                                                                                                     self.items_feature,
-                                                                                                     self.num_bundles,
-                                                                                                     self.num_items,
-                                                                                                     self.bi_graph_shape,
-                                                                                                     n_factors=1,
-                                                                                                     pick_=False)
             IL_users_feature, IL_items_feature = self.one_propagate(self.item_level_graph, self.users_feature, self.items_feature, self.item_level_dropout, test)
 
         # aggregate the items embeddings within one bundle to obtain the bundle representation
@@ -420,21 +331,38 @@ class CrossCBR(nn.Module):
         if test:
             BL_users_feature, BL_bundles_feature = self.one_propagate(self.bundle_level_graph_ori, self.users_feature, self.bundles_feature, self.bundle_level_dropout, test)
         else:
-            TL_user_feature, TL_item_feature_user, self.ui_avalues = self._create_star_routing_embed_with_p(self.ui_graph_h,
-                                                                                                   self.ui_graph_t,
-                                                                                                   self.users_feature,
-                                                                                                   self.items_feature,
-                                                                                                   self.num_users,
-                                                                                                   self.num_items,
-                                                                                                   self.ui_graph_shape,
-                                                                                                   n_factors=self.n_factors,
-                                                                                                   pick_=False)
+            
             BL_users_feature, BL_bundles_feature = self.one_propagate(self.bundle_level_graph, self.users_feature, self.bundles_feature, self.bundle_level_dropout, test)
-        ui_avalues_e_list = []
-        ui_avalues_list = []
-
-        users_feature = [IL_users_feature, BL_users_feature, TL_user_feature]
-        bundles_feature = [IL_bundles_feature, BL_bundles_feature, TL_bundles_feature]
+        # =============================== multi-intent-level propagation ===============================
+        TL_user_feature, TL_item_feature_user, _ = self._create_star_routing_embed_with_p(self.ui_graph_h,
+                                                                                                self.ui_graph_t,
+                                                                                                self.users_feature,
+                                                                                                self.items_feature,
+                                                                                                self.num_users,
+                                                                                                self.num_items,
+                                                                                                self.ui_graph_shape,
+                                                                                                n_factors=self.n_factors,
+                                                                                                pick_=False)
+        TL_bundles_feature, TL_item_feature_bundle, _ = self._create_star_routing_embed_with_p(self.bi_graph_h,
+                                                                                                    self.bi_graph_t,
+                                                                                                    self.bundles_feature,
+                                                                                                    self.items_feature,
+                                                                                                    self.num_bundles,
+                                                                                                    self.num_items,
+                                                                                                    self.bi_graph_shape,
+                                                                                                    n_factors=1,
+                                                                                                    pick_=False)
+        # =============================== multiintent propagation ===============================
+        if test:
+            # calculate with no dropout
+            TL_users_agg = self.aggregate_item(self.ui_aggregate_graph_ori, TL_item_feature_user)
+            TL_bundles_agg = self.aggregate_item(self.bi_aggregate_graph_ori, TL_item_feature_bundle)
+        else:
+            # calculate with dropout
+            TL_users_agg = self.aggregate_item(self.ui_aggregate_graph, TL_item_feature_user)
+            TL_bundles_agg = self.aggregate_item(self.bi_aggregate_graph, TL_item_feature_bundle)
+        users_feature = [IL_users_feature, BL_users_feature, TL_user_agg]
+        bundles_feature = [IL_bundles_feature, BL_bundles_feature, TL_bundles_agg]
 
         return users_feature, bundles_feature
 
@@ -520,7 +448,7 @@ class CrossCBR(nn.Module):
         factor_num = [n_factors, n_factors, n_factors, n_factors, n_factors, n_factors]
         iter_num = [self.n_iterations, self.n_iterations, self.n_iterations, self.n_iterations, self.n_iterations,
                     self.n_iterations]
-        for k in range(0, self.n_layers):
+        for k in range(0, 3):
             # prepare the output embedding list
             # .... layer_embeddings stores a (n_factors)-len list of outputs derived from the last routing iterations.
             n_factors_l = factor_num[k]
@@ -558,24 +486,24 @@ class CrossCBR(nn.Module):
                     pick=p_train)
                 for i in range(0, n_factors_l):
                     
-                    A_factor_embeddings = torch_sparse.spmm(D_indices_row.to(self.device), D_row_factors[i].to(self.device), A_inshape[1].to(self.device), A_inshape[1].to(self.device),
-                                                            ego_layer_B_embeddings[i].to(self.device))
-                    A_factor_embeddings = torch_sparse.spmm(A_indices.to(self.device), A_factors[i].to(self.device), A_inshape[0].to(self.device), A_inshape[1].to(self.device),
-                                                            A_factor_embeddings.to(self.device))  # torch.sparse.mm(A_factors[i], factor_embeddings)
+                    A_factor_embeddings = torch_sparse.spmm(D_indices_row, D_row_factors[i], A_inshape[1], A_inshape[1],
+                                                            ego_layer_B_embeddings[i])
+                    A_factor_embeddings = torch_sparse.spmm(A_indices, A_factors[i], A_inshape[0], A_inshape[1],
+                                                            A_factor_embeddings)  # torch.sparse.mm(A_factors[i], factor_embeddings)
 
-                    A_factor_embeddings = torch_sparse.spmm(D_indices_col.to(self.device), D_col_factors[i].to(self.device), A_inshape[0].to(self.device), A_inshape[0].to(self.device),
-                                                            A_factor_embeddings.to(self.device))
-                    A_iter_embedding = ego_layer_A_embeddings[i].to(self.device) + A_factor_embeddings.to(self.device)
+                    A_factor_embeddings = torch_sparse.spmm(D_indices_col, D_col_factors[i], A_inshape[0], A_inshape[0],
+                                                            A_factor_embeddings)
+                    A_iter_embedding = ego_layer_A_embeddings[i] + A_factor_embeddings
 
-                    B_factor_embeddings = torch_sparse.spmm(D_indices_col.to(self.device), D_col_factors[i].to(self.device), A_inshape[0].to(self.device), A_inshape[0].to(self.device),
-                                                            ego_layer_A_embeddings[i].to(self.device))
-                    B_factor_embeddings = torch_sparse.spmm(A_indices[[1, 0]].to(self.device), A_factors_t[i].to(self.device), A_inshape[1].to(self.device),
-                                                            A_inshape[0].to(self.device),
-                                                            B_factor_embeddings.to(self.device))  # torch.sparse.mm(A_factors[i], factor_embeddings)
+                    B_factor_embeddings = torch_sparse.spmm(D_indices_col, D_col_factors[i], A_inshape[0], A_inshape[0],
+                                                            ego_layer_A_embeddings[i])
+                    B_factor_embeddings = torch_sparse.spmm(A_indices[[1, 0]], A_factors_t[i], A_inshape[1],
+                                                            A_inshape[0],
+                                                            B_factor_embeddings)  # torch.sparse.mm(A_factors[i], factor_embeddings)
 
-                    B_factor_embeddings = torch_sparse.spmm(D_indices_row.to(self.device), D_row_factors[i].to(self.device), A_inshape[1].to(self.device), A_inshape[1].to(self.device),
-                                                            B_factor_embeddings.to(self.device))
-                    B_iter_embedding = ego_layer_B_embeddings[i].to(self.device) + B_factor_embeddings.to(self.device)
+                    B_factor_embeddings = torch_sparse.spmm(D_indices_row, D_row_factors[i], A_inshape[1], A_inshape[1],
+                                                            B_factor_embeddings)
+                    B_iter_embedding = ego_layer_B_embeddings[i] + B_factor_embeddings
                     # A_iter_embedding,B_iter_embedding=torch.split(factor_embeddings, [numA, numB], 0)
                     A_iter_embeddings.append(A_iter_embedding)
                     B_iter_embeddings.append(B_iter_embedding)
@@ -591,12 +519,12 @@ class CrossCBR(nn.Module):
 
                     # .... constrain the vector length
                     # .... make the following attentive weights within the range of (0,1)
-                    head_factor_embedings = F.normalize(head_factor_embedings, dim=1).to(self.device)
-                    tail_factor_embedings = F.normalize(tail_factor_embedings, dim=1).to(self.device)
+                    head_factor_embedings = F.normalize(head_factor_embedings, dim=1)
+                    tail_factor_embedings = F.normalize(tail_factor_embedings, dim=1)
 
                     # get the attentive weights
                     # .... A_factor_values is a dense tensor with the size of [all_h_list,1]
-                    A_factor_values = torch.sum(torch.mul(head_factor_embedings, F.tanh(tail_factor_embedings)), axis=1).to(self.device)
+                    A_factor_values = torch.sum(torch.mul(head_factor_embedings, F.tanh(tail_factor_embedings)), axis=1)
 
                     # update the attentive weights
                     A_iter_values.append(A_factor_values)
@@ -622,8 +550,8 @@ class CrossCBR(nn.Module):
         all_B_embeddings = torch.stack(all_B_embeddings, 1)
         all_B_embeddings = torch.mean(all_B_embeddings, dim=1, keepdims=False)
 
-        return all_A_embeddings.to(self.device), all_B_embeddings.to(self.device), A_values.to(self.device)
-
+        return all_A_embeddings, all_B_embeddings, A_values
+    
     def _convert_A_values_to_A_factors_with_P(self, f_num, A_factor_values, all_h_list, all_t_list, numA, numB,
                                               A_inshape, pick=False):
         A_factors = []
@@ -690,6 +618,17 @@ class CrossCBR(nn.Module):
 
         return bpr_loss, c_loss
 
+    def aggregate_item(self, agg_graph, i_feature):
+        '''
+        dropout edge had been processed in graph
+        '''
+        feat = agg_graph @ i_feature
+        # if not test:
+        #     if agg_type=='UI':
+        #         feat = self.bundle_agg_dropout(feat)
+        #     if agg_type=='BI':
+        #         feat = self.user_agg_dropout(feat)
+        return feat
 
     def evaluate(self, propagate_result, users):
         users_feature, bundles_feature = propagate_result
