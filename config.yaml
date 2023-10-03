@@ -27,7 +27,7 @@ Youshu:
   ## hard negative sample and further train
   #'sample': 'simple',
   #  'sample': 'hard',
-  hard_window: [0.6, 1.0] # top 40%
+  hard_window: [0.5, 1.0] # top 40%
   hard_prob: [0.4, 0.4] # probability 0.8
 
 
