@@ -432,12 +432,9 @@ class CrossCBR(nn.Module):
             BL_users_feature, BL_bundles_feature = self.one_propagate(self.bundle_level_graph, self.users_feature, self.bundles_feature, self.bundle_level_dropout, test)
         ui_avalues_e_list = []
         ui_avalues_list = []
-        if test:
-            users_feature = [IL_users_feature, BL_users_feature, TL_user_feature]
-            bundles_feature = [IL_bundles_feature, BL_bundles_feature, TL_bundles_feature]
-        else:
-            users_feature = [IL_users_feature, BL_users_feature, TL_user_feature]
-            bundles_feature = [IL_bundles_feature, BL_bundles_feature, TL_bundles_feature]
+
+        users_feature = [IL_users_feature, BL_users_feature, TL_user_feature]
+        bundles_feature = [IL_bundles_feature, BL_bundles_feature, TL_bundles_feature]
 
         return users_feature, bundles_feature
 
