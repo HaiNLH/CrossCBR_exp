@@ -558,36 +558,36 @@ class CrossCBR(nn.Module):
                     pick=p_train)
                 for i in range(0, n_factors_l):
                     
-                    A_factor_embeddings = torch_sparse.spmm(D_indices_row, D_row_factors[i], A_inshape[1], A_inshape[1],
-                                                            ego_layer_B_embeddings[i]).to(self.device)
-                    A_factor_embeddings = torch_sparse.spmm(A_indices, A_factors[i], A_inshape[0], A_inshape[1],
-                                                            A_factor_embeddings).to(self.device)  # torch.sparse.mm(A_factors[i], factor_embeddings)
+                    A_factor_embeddings = torch_sparse.spmm(D_indices_row.to(self.device), D_row_factors[i].to(self.device), A_inshape[1].to(self.device), A_inshape[1].to(self.device),
+                                                            ego_layer_B_embeddings[i].to(self.device))
+                    A_factor_embeddings = torch_sparse.spmm(A_indices.to(self.device), A_factors[i].to(self.device), A_inshape[0].to(self.device), A_inshape[1].to(self.device),
+                                                            A_factor_embeddings.to(self.device))  # torch.sparse.mm(A_factors[i], factor_embeddings)
 
-                    A_factor_embeddings = torch_sparse.spmm(D_indices_col, D_col_factors[i], A_inshape[0], A_inshape[0],
-                                                            A_factor_embeddings).to(self.device)
-                    A_iter_embedding = ego_layer_A_embeddings[i] + A_factor_embeddings
+                    A_factor_embeddings = torch_sparse.spmm(D_indices_col.to(self.device), D_col_factors[i].to(self.device), A_inshape[0].to(self.device), A_inshape[0].to(self.device),
+                                                            A_factor_embeddings.to(self.device))
+                    A_iter_embedding = ego_layer_A_embeddings[i].to(self.device) + A_factor_embeddings.to(self.device)
 
-                    B_factor_embeddings = torch_sparse.spmm(D_indices_col, D_col_factors[i], A_inshape[0], A_inshape[0],
-                                                            ego_layer_A_embeddings[i]).to(self.device)
-                    B_factor_embeddings = torch_sparse.spmm(A_indices[[1, 0]], A_factors_t[i], A_inshape[1],
-                                                            A_inshape[0],
-                                                            B_factor_embeddings).to(self.device)  # torch.sparse.mm(A_factors[i], factor_embeddings)
+                    B_factor_embeddings = torch_sparse.spmm(D_indices_col.to(self.device), D_col_factors[i].to(self.device), A_inshape[0].to(self.device), A_inshape[0].to(self.device),
+                                                            ego_layer_A_embeddings[i].to(self.device))
+                    B_factor_embeddings = torch_sparse.spmm(A_indices[[1, 0]].to(self.device), A_factors_t[i].to(self.device), A_inshape[1].to(self.device),
+                                                            A_inshape[0].to(self.device),
+                                                            B_factor_embeddings.to(self.device))  # torch.sparse.mm(A_factors[i], factor_embeddings)
 
-                    B_factor_embeddings = torch_sparse.spmm(D_indices_row, D_row_factors[i], A_inshape[1], A_inshape[1],
-                                                            B_factor_embeddings).to(self.device)
-                    B_iter_embedding = ego_layer_B_embeddings[i] + B_factor_embeddings
+                    B_factor_embeddings = torch_sparse.spmm(D_indices_row.to(self.device), D_row_factors[i].to(self.device), A_inshape[1].to(self.device), A_inshape[1].to(self.device),
+                                                            B_factor_embeddings.to(self.device))
+                    B_iter_embedding = ego_layer_B_embeddings[i].to(self.device) + B_factor_embeddings.to(self.device)
                     # A_iter_embedding,B_iter_embedding=torch.split(factor_embeddings, [numA, numB], 0)
                     A_iter_embeddings.append(A_iter_embedding)
                     B_iter_embeddings.append(B_iter_embedding)
 
                     if t == n_iterations_l - 1:
-                        A_layer_embeddings = A_iter_embeddings.to(self.device)
-                        B_layer_embeddings = B_iter_embeddings.to(self.device)
+                        A_layer_embeddings = A_iter_embeddings
+                        B_layer_embeddings = B_iter_embeddings
                         # get the factor-wise embeddings
                     # .... head_factor_embeddings is a dense tensor with the size of [all_h_list, embed_size/n_factors]
                     # .... analogous to tail_factor_embeddings
-                    head_factor_embedings = A_iter_embedding[all_h_list].to(self.device)
-                    tail_factor_embedings = ego_layer_B_embeddings[i][all_t_list].to(self.device)
+                    head_factor_embedings = A_iter_embedding[all_h_list]
+                    tail_factor_embedings = ego_layer_B_embeddings[i][all_t_list]
 
                     # .... constrain the vector length
                     # .... make the following attentive weights within the range of (0,1)
