@@ -48,7 +48,7 @@ class BundleTrainDataset(Dataset):
             while True:
                 i = np.random.randint(self.u_b_for_neg_sample.shape[1])
                 b_n1 = self.u_b_for_neg_sample[user_b, i]
-                if self.ground_truth_u_b[user_b, b_n1] == 0 and not b_n1 in all_bundles:
+                if self.u_b_graph[user_b, b_n1] == 0 and not b_n1 in all_bundles:
                     all_bundles.append(b_n1)
                     if len(all_bundles) == self.neg_sample+1:
                         break
@@ -57,7 +57,7 @@ class BundleTrainDataset(Dataset):
             while True:
                 i = np.random.randint(self.b_b_for_neg_sample.shape[1])
                 b_n2 = self.b_b_for_neg_sample[pos_bundle, i]
-                if self.ground_truth_u_b[user_b, b_n2] == 0 and not b_n2 in all_bundles:
+                if self.u_b_graph[user_b, b_n2] == 0 and not b_n2 in all_bundles:
                     all_bundles.append(b_n2)
                     if len(all_bundles) == self.neg_sample+1:
                         break
