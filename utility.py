@@ -64,7 +64,7 @@ class BundleTrainDataset(Dataset):
         else:
             while True:
                 i = np.random.randint(self.num_bundles)
-                if self.ground_truth_u_b[user_b, i] == 0 and not i in all_bundles:
+                if self.u_b_graph[user_b, i] == 0 and not i in all_bundles:
                     all_bundles.append(i)
                     if len(all_bundles) == self.neg_sample+1:
                         break
