@@ -282,7 +282,7 @@ class CrossCBR(nn.Module):
                                                                                                 self.num_users,
                                                                                                 self.num_items,
                                                                                                 self.ui_graph_shape,
-                                                                                                n_factors=self.n_factors,
+                                                                                                n_factors=4,
                                                                                                 pick_=False)
         TL_bundles_feature, TL_item_feature_bundle, _ = self._create_star_routing_embed_with_p(self.bi_graph_h,
                                                                                                     self.bi_graph_t,
