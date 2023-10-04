@@ -60,7 +60,7 @@ class CrossCBR(nn.Module):
         self.num_users = conf["num_users"]
         self.num_bundles = conf["num_bundles"]
         self.num_items = conf["num_items"]
-
+        self.n_iterations = 2
         self.init_emb()
 
         assert isinstance(raw_graph, list)
@@ -83,33 +83,26 @@ class CrossCBR(nn.Module):
         self.MIDGN_weight = self.conf["MIDGN_weight"]
 
         # MIDGN graph
-        temp = self.bi_graph.tocoo()
-        self.bi_graph_h = list(temp.row)
-        self.bi_graph_t = list(temp.col)
-        self.bi_graph_shape = self.bi_graph.shape
-        temp = self.ui_graph.tocoo()
-        self.ui_graph_h = list(temp.row)
-        self.ui_graph_t = list(temp.col)
+        ui_graph_coo, ub_graph_coo, bi_graph_coo = self.ui_graph.tocoo(), self.ub_graph.tocoo(), self.bi_graph.tocoo()
+        self.ui_graph_h = list(ui_graph_coo.row)
+        self.ui_graph_t = list(ui_graph_coo.col)
         self.ui_graph_shape = self.ui_graph.shape
-        temp = self.ub_graph.tocoo()
-        self.ub_graph_h = list(temp.row)
-        self.ub_graph_t = list(temp.col)
+        self.ub_graph_h = list(ub_graph_coo.row)
+        self.ub_graph_t = list(ub_graph_coo.col)
         self.ub_graph_shape = self.ub_graph.shape
-
+        self.bi_graph_h = list(bi_graph_coo.row)
+        self.bi_graph_t = list(bi_graph_coo.col)
+        self.bi_graph_shape = self.bi_graph.shape
         bi_norm = sp.diags(1 / (np.sqrt((self.bi_graph.multiply(self.bi_graph)).sum(axis=1).A.ravel()) + 1e-8)) @ self.bi_graph
         bb_graph = bi_norm @ bi_norm.T
         temp = sp.bmat([[sp.identity(self.ub_graph.shape[0]), self.ub_graph],
                                       [self.ub_graph.T, bb_graph]])
         self.ub_mat = to_tensor(laplace_transform(temp)).to(device)
-
         self.mess_dropout = nn.Dropout(0.3, True)
         self.node_dropout = nn.Dropout(0, True)
-        
-        self.n_iterations = 2
         del bb_graph
         del temp
-
-        #MIDGN aggregate
+        #Get graph for train data set and test data set
         self.ui_aggregate_graph = self.get_aggregation_graph(self.ui_graph)
         self.bi_aggregate_graph = self.get_aggregation_graph(self.bi_graph)
         self.ui_aggregate_graph_ori = self.get_aggregation_graph(self.ui_graph, 0)
@@ -295,16 +288,14 @@ class CrossCBR(nn.Module):
                                                                                                     pick_=False)
         # =============================== multiintent propagation ===============================
         if test:
-            # calculate with no dropout
             TL_users_agg = self.aggregate_item(self.ui_aggregate_graph_ori, TL_item_feature_user)
             TL_bundles_agg = self.aggregate_item(self.bi_aggregate_graph_ori, TL_item_feature_bundle)
         else:
-            # calculate with dropout
             TL_users_agg = self.aggregate_item(self.ui_aggregate_graph, TL_item_feature_user)
             TL_bundles_agg = self.aggregate_item(self.bi_aggregate_graph, TL_item_feature_bundle)
 
 
-        users_feature = [IL_users_feature, BL_users_feature, TL_user_agg]
+        users_feature = [IL_users_feature, BL_users_feature, TL_users_agg]
         bundles_feature = [IL_bundles_feature, BL_bundles_feature, TL_bundles_agg]
 
         return users_feature, bundles_feature
@@ -339,14 +330,24 @@ class CrossCBR(nn.Module):
         c_loss = - torch.mean(torch.log(pos_score / ttl_score))
 
         return c_loss
+    def normalize_tensor(self, tensor):
+        # Find the minimum and maximum values in the tensor
+        min_val = torch.min(tensor)  # Minimum value
+        max_val = torch.max(tensor)  # Maximum value
 
+        # Normalize the tensor to the range [0, 1]
+        normalized_tensor = (tensor - min_val) / (max_val - min_val)
+
+        return normalized_tensor
 
     def cal_loss(self, users_feature, bundles_feature):
         # IL: item_level, BL: bundle_level, TL: Intent-level
         # [bs, 1, emb_size]
         IL_users_feature, BL_users_feature, TL_users_feature = users_feature
         # [bs, 1+neg_num, emb_size]
-        IL_bundles_feature, BL_bundles_feature, TL_bundles_feature = bundles_feature
+        
+        # IL_bundles_feature, BL_bundles_feature, TL_bundles_feature = bundles_feature
+        # print(self.normalize_tensor(TL_users_feature), self.normalize_tensor(TL_bundles_feature))
         # [bs, 1+neg_num]
 
         #Nhan 3 feature
