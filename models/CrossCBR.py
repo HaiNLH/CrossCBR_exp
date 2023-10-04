@@ -60,6 +60,7 @@ class CrossCBR(nn.Module):
         self.num_users = conf["num_users"]
         self.num_bundles = conf["num_bundles"]
         self.num_items = conf["num_items"]
+
         self.init_emb()
 
         assert isinstance(raw_graph, list)
@@ -114,13 +115,6 @@ class CrossCBR(nn.Module):
         self.ui_aggregate_graph_ori = self.get_aggregation_graph(self.ui_graph, 0)
         self.bi_aggregate_graph_ori = self.get_aggregation_graph(self.bi_graph, 0)
 
-    def init_emb(self):
-        self.users_feature = nn.Parameter(torch.FloatTensor(self.num_users, self.embedding_size))
-        nn.init.xavier_normal_(self.users_feature)
-        self.bundles_feature = nn.Parameter(torch.FloatTensor(self.num_bundles, self.embedding_size))
-        nn.init.xavier_normal_(self.bundles_feature)
-        self.items_feature = nn.Parameter(torch.FloatTensor(self.num_items, self.embedding_size))
-        nn.init.xavier_normal_(self.items_feature)
 
     def init_md_dropouts(self):
         self.item_level_dropout = nn.Dropout(self.conf["item_level_ratio"], True)
@@ -128,15 +122,12 @@ class CrossCBR(nn.Module):
         self.bundle_agg_dropout = nn.Dropout(self.conf["bundle_agg_ratio"], True)
 
 
-    def init_emb(self, embed_dim):
+    def init_emb(self):
         self.users_feature = nn.Parameter(torch.FloatTensor(self.num_users, self.embedding_size))
         nn.init.xavier_normal_(self.users_feature)
         self.bundles_feature = nn.Parameter(torch.FloatTensor(self.num_bundles, self.embedding_size))
         nn.init.xavier_normal_(self.bundles_feature)
-        self.items_feature_each = nn.Parameter(
-            torch.FloatTensor(self.num_items, embed_dim))
-        # self.items_feature = nn.Parameter(torch.FloatTensor(self.num_items, self.embedding_size))
-        self.items_feature = torch.cat([self.items_feature_each for i in range(self.n_factors)], dim=1)
+        self.items_feature = nn.Parameter(torch.FloatTensor(self.num_items, self.embedding_size))
         nn.init.xavier_normal_(self.items_feature)
 
 
@@ -311,6 +302,8 @@ class CrossCBR(nn.Module):
             # calculate with dropout
             TL_users_agg = self.aggregate_item(self.ui_aggregate_graph, TL_item_feature_user)
             TL_bundles_agg = self.aggregate_item(self.bi_aggregate_graph, TL_item_feature_bundle)
+
+
         users_feature = [IL_users_feature, BL_users_feature, TL_user_agg]
         bundles_feature = [IL_bundles_feature, BL_bundles_feature, TL_bundles_agg]
 
