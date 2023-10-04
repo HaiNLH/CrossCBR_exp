@@ -575,8 +575,8 @@ class CrossCBR(nn.Module):
 
     def evaluate(self, propagate_result, users):
         users_feature, bundles_feature = propagate_result
-        users_feature_atom, users_feature_non_atom = [i[users] for i in users_feature]
-        bundles_feature_atom, bundles_feature_non_atom = bundles_feature
+        users_feature_atom, users_feature_non_atom, tl_users_feature = [i[users] for i in users_feature]
+        bundles_feature_atom, bundles_feature_non_atom, tl_bundles_feature = bundles_feature
 
-        scores = torch.mm(users_feature_atom, bundles_feature_atom.t()) + torch.mm(users_feature_non_atom, bundles_feature_non_atom.t())
+        scores = torch.mm(users_feature_atom, bundles_feature_atom.t()) + torch.mm(users_feature_non_atom, bundles_feature_non_atom.t()) + torch.mm(tl_users_feature, tl_bundles_feature.t())
         return scores
