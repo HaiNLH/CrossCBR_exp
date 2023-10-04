@@ -303,8 +303,7 @@ class CrossCBR(nn.Module):
             TL_users_agg = self.aggregate_item(self.ui_aggregate_graph, TL_item_feature_user)
             TL_bundles_agg = self.aggregate_item(self.bi_aggregate_graph, TL_item_feature_bundle)
 
-
-        users_feature = [IL_users_feature, BL_users_feature, TL_user_agg]
+        users_feature = [IL_users_feature, BL_users_feature, TL_users_agg]
         bundles_feature = [IL_bundles_feature, BL_bundles_feature, TL_bundles_agg]
 
         return users_feature, bundles_feature
@@ -575,8 +574,8 @@ class CrossCBR(nn.Module):
 
     def evaluate(self, propagate_result, users):
         users_feature, bundles_feature = propagate_result
-        users_feature_atom, users_feature_non_atom = [i[users] for i in users_feature]
-        bundles_feature_atom, bundles_feature_non_atom = bundles_feature
+        users_feature_atom, users_feature_non_atom, tl_users_feature = [i[users] for i in users_feature]
+        bundles_feature_atom, bundles_feature_non_atom, tl_bundles_feature = bundles_feature
 
-        scores = torch.mm(users_feature_atom, bundles_feature_atom.t()) + torch.mm(users_feature_non_atom, bundles_feature_non_atom.t())
+        scores = torch.mm(users_feature_atom, bundles_feature_atom.t()) + torch.mm(users_feature_non_atom, bundles_feature_non_atom.t()) + torch.mm(tl_users_feature, tl_bundles_feature.t())
         return scores
