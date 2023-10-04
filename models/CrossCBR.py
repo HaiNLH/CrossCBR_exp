@@ -348,7 +348,11 @@ class CrossCBR(nn.Module):
         # [bs, 1+neg_num, emb_size]
         IL_bundles_feature, BL_bundles_feature, TL_bundles_feature = bundles_feature
         # [bs, 1+neg_num]
-        pred = torch.sum(IL_users_feature * IL_bundles_feature, 2) + torch.sum(BL_users_feature * BL_bundles_feature, 2) + torch.sum(TL_users_feature * TL_bundles_feature, 2)
+
+        #Nhan 3 feature
+        # pred = torch.sum(IL_users_feature * IL_bundles_feature, 2) + torch.sum(BL_users_feature * BL_bundles_feature, 2) + torch.sum(TL_users_feature * TL_bundles_feature, 2)
+        pred = torch.sum((torch.cat(((IL_users_feature), (BL_users_feature)),2)* torch.cat(((IL_bundles_feature),(BL_bundles_feature)),2)*torch.cat(((TL_users_feature), (TL_bundles_feature)),2)),2)
+
         bpr_loss = cal_bpr_loss(pred)
 
         # cl is abbr. of "contrastive loss"
