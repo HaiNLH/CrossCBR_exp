@@ -346,7 +346,7 @@ class CrossCBR(nn.Module):
         IL_users_feature, BL_users_feature, TL_users_feature = users_feature
         # [bs, 1+neg_num, emb_size]
         
-        # IL_bundles_feature, BL_bundles_feature, TL_bundles_feature = bundles_feature
+        IL_bundles_feature, BL_bundles_feature, TL_bundles_feature = bundles_feature
         # print(self.normalize_tensor(TL_users_feature), self.normalize_tensor(TL_bundles_feature))
         # [bs, 1+neg_num]
 
