@@ -286,12 +286,30 @@ class CrossCBR(nn.Module):
                                                                                                     self.bi_graph_shape,
                                                                                                     n_factors=1,
                                                                                                     pick_=False)
-
+        TL_users_feature, TL_bundles_feature = self.ub_propagate(self.ub_mat, TL_users_feature, TL_bundles_feature)
+        # if test:
+        #     # calculate with no dropout
+        #     MI_users_agg = self.aggregate_item(self.ui_aggregate_graph_ori, MI_IL_items_feature)
+        #     MI_bundles_agg = self.aggregate_item(self.bi_aggregate_graph_ori, MI_BL_items_feature)
+        # else:
+        #     # calculate with dropout
+        #     MI_users_agg = self.aggregate_item(self.ui_aggregate_graph, MI_IL_items_feature)
+        #     MI_bundles_agg = self.aggregate_item(self.bi_aggregate_graph, MI_BL_items_feature)
         users_feature = [IL_users_feature, BL_users_feature, TL_users_feature]
         bundles_feature = [IL_bundles_feature, BL_bundles_feature, TL_bundles_feature]
 
         return users_feature, bundles_feature
-
+    def aggregate_item(self, agg_graph, i_feature):
+        '''
+        dropout edge had been processed in graph
+        '''
+        feat = agg_graph @ i_feature
+        # if not test:
+        #     if agg_type=='UI':
+        #         feat = self.bundle_agg_dropout(feat)
+        #     if agg_type=='BI':
+        #         feat = self.user_agg_dropout(feat)
+        return feat
     def get_ubi_non_weighted(self, ub, bi):
         '''
         ub : user-bunlde coo-graph
