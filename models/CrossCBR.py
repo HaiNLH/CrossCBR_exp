@@ -268,7 +268,7 @@ class CrossCBR(nn.Module):
             
             BL_users_feature, BL_bundles_feature = self.one_propagate(self.bundle_level_graph, self.users_feature, self.bundles_feature, self.bundle_level_dropout, test)
         # =============================== multi-intent-level propagation ===============================
-        TL_user_feature, TL_item_feature_user, _ = self._create_star_routing_embed_with_p(self.ui_graph_h,
+        TL_users_feature, TL_item_feature_user, _ = self._create_star_routing_embed_with_p(self.ui_graph_h,
                                                                                                 self.ui_graph_t,
                                                                                                 self.users_feature,
                                                                                                 self.items_feature,
@@ -286,14 +286,6 @@ class CrossCBR(nn.Module):
                                                                                                     self.bi_graph_shape,
                                                                                                     n_factors=1,
                                                                                                     pick_=False)
-        # =============================== multiintent propagation ===============================
-        if test:
-            TL_users_agg = self.aggregate_item(self.ui_aggregate_graph_ori, TL_item_feature_user)
-            TL_bundles_agg = self.aggregate_item(self.bi_aggregate_graph_ori, TL_item_feature_bundle)
-        else:
-            TL_users_agg = self.aggregate_item(self.ui_aggregate_graph, TL_item_feature_user)
-            TL_bundles_agg = self.aggregate_item(self.bi_aggregate_graph, TL_item_feature_bundle)
-
 
         users_feature = [IL_users_feature, BL_users_feature, TL_users_feature]
         bundles_feature = [IL_bundles_feature, BL_bundles_feature, TL_bundles_feature]
@@ -566,17 +558,6 @@ class CrossCBR(nn.Module):
 
         return bpr_loss, c_loss
 
-    def aggregate_item(self, agg_graph, i_feature):
-        '''
-        dropout edge had been processed in graph
-        '''
-        feat = agg_graph @ i_feature
-        # if not test:
-        #     if agg_type=='UI':
-        #         feat = self.bundle_agg_dropout(feat)
-        #     if agg_type=='BI':
-        #         feat = self.user_agg_dropout(feat)
-        return feat
 
     def evaluate(self, propagate_result, users):
         users_feature, bundles_feature = propagate_result
