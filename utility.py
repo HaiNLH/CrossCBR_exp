@@ -37,14 +37,37 @@ class BundleTrainDataset(Dataset):
         conf = self.conf
         user_b, pos_bundle = self.u_b_pairs[index]
         all_bundles = [pos_bundle]
-
-        while True:
-            i = np.random.randint(self.num_bundles)
-            if self.u_b_graph[user_b, i] == 0 and not i in all_bundles:                                                          
-                all_bundles.append(i)                                                                                                   
-                if len(all_bundles) == self.neg_sample+1:                                                                               
-                    break                                                                                                               
-
+        # while True:
+        #     i = np.random.randint(self.num_bundles)
+        #     if self.u_b_graph[user_b, i] == 0 and not i in all_bundles:                                                          
+        #         all_bundles.append(i)                                                                                                   
+        #         if len(all_bundles) == self.neg_sample+1:                                                                               
+        #             break
+        hard_probability = round(np.random.uniform(0, 1), 1)
+        if  hard_probability <= conf['hard_prob'][0]:
+            while True:
+                i = np.random.randint(self.u_b_for_neg_sample.shape[1])
+                b_n1 = self.u_b_for_neg_sample[user_b, i]
+                if self.u_b_graph[user_b, b_n1] == 0 and not b_n1 in all_bundles:
+                    all_bundles.append(b_n1)
+                    if len(all_bundles) == self.neg_sample+1:
+                        break
+        elif conf['hard_prob'][0] < hard_probability \
+            <= conf['hard_prob'][0] + conf['hard_prob'][1]:
+            while True:
+                i = np.random.randint(self.b_b_for_neg_sample.shape[1])
+                b_n2 = self.b_b_for_neg_sample[pos_bundle, i]
+                if self.u_b_graph[user_b, b_n2] == 0 and not b_n2 in all_bundles:
+                    all_bundles.append(b_n2)
+                    if len(all_bundles) == self.neg_sample+1:
+                        break
+        else:
+            while True:
+                i = np.random.randint(self.num_bundles)
+                if self.u_b_graph[user_b, i] == 0 and not i in all_bundles:
+                    all_bundles.append(i)
+                    if len(all_bundles) == self.neg_sample+1:
+                        break
         return torch.LongTensor([user_b]), torch.LongTensor(all_bundles)
 
 
@@ -92,7 +115,7 @@ class Datasets():
         u_b_pairs_val, u_b_graph_val = self.get_ub("tune")
         u_b_pairs_test, u_b_graph_test = self.get_ub("test")
 
-        u_b_for_neg_sample, b_b_for_neg_sample = None, None
+        u_b_for_neg_sample, b_b_for_neg_sample = self.get_aux_graph(u_i_graph, b_i_graph, conf)
 
         self.bundle_train_data = BundleTrainDataset(conf, u_b_pairs_train, u_b_graph_train, self.num_bundles, u_b_for_neg_sample, b_b_for_neg_sample, conf["neg_num"])
         self.bundle_val_data = BundleTestDataset(u_b_pairs_val, u_b_graph_val, u_b_graph_train, self.num_users, self.num_bundles)
@@ -125,7 +148,6 @@ class Datasets():
         b_b_for_neg_sample = np.argsort(b_b_from_i, axis=1)[:, bn2_window[0]:bn2_window[1]]
 
         return u_b_for_neg_sample, b_b_for_neg_sample
-
 
     def get_bi(self):
         with open(os.path.join(self.path, self.name, 'bundle_item.txt'), 'r') as f:
