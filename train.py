@@ -135,20 +135,17 @@ def main():
                     ED_drop = True
                 bpr_loss, c_loss = model(batch, ED_drop=ED_drop)
                 loss = bpr_loss + conf["c_lambda"] * c_loss
-                # print('this is new: ')
-                # print(loss)
-            
                 loss.backward()
                 optimizer.step()
 
-                # loss_scalar = loss.detach()
-                # bpr_loss_scalar = bpr_loss.detach()
-                # c_loss_scalar = c_loss.detach()
-                # run.add_scalar("loss_bpr", bpr_loss_scalar, batch_anchor)
-                # run.add_scalar("loss_c", c_loss_scalar, batch_anchor)
-                # run.add_scalar("loss", loss_scalar, batch_anchor)
+                loss_scalar = loss.detach()
+                bpr_loss_scalar = bpr_loss.detach()
+                c_loss_scalar = c_loss.detach()
+                run.add_scalar("loss_bpr", bpr_loss_scalar, batch_anchor)
+                run.add_scalar("loss_c", c_loss_scalar, batch_anchor)
+                run.add_scalar("loss", loss_scalar, batch_anchor)
 
-                pbar.set_description("epoch: %d, loss: %.4f" %(epoch, loss))
+                pbar.set_description("epoch: %d, loss: %.4f, bpr_loss: %.4f, c_loss: %.4f" %(epoch, loss_scalar, bpr_loss_scalar, c_loss_scalar))
 
                 if (batch_anchor+1) % test_interval_bs == 0:
                     print('\n')
@@ -310,7 +307,6 @@ def get_ndcg(pred, grd, is_hit, topk):
     nomina = ndcg.sum().item()
 
     return [nomina, denorm]
-
 
 if __name__ == "__main__":
     main()
