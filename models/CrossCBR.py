@@ -295,8 +295,8 @@ class CrossCBR(nn.Module):
             TL_bundles_agg = self.aggregate_item(self.bi_aggregate_graph, TL_item_feature_bundle)
 
 
-        users_feature = [IL_users_feature, BL_users_feature, TL_users_agg]
-        bundles_feature = [IL_bundles_feature, BL_bundles_feature, TL_bundles_agg]
+        users_feature = [IL_users_feature, BL_users_feature, TL_users_feature]
+        bundles_feature = [IL_bundles_feature, BL_bundles_feature, TL_bundles_feature]
 
         return users_feature, bundles_feature
 
