@@ -268,15 +268,6 @@ class CrossCBR(nn.Module):
             
             BL_users_feature, BL_bundles_feature = self.one_propagate(self.bundle_level_graph, self.users_feature, self.bundles_feature, self.bundle_level_dropout, test)
         # =============================== multi-intent-level propagation ===============================
-        TL_users_feature, TL_item_feature_user, _ = self._create_star_routing_embed_with_p(self.ui_graph_h,
-                                                                                                self.ui_graph_t,
-                                                                                                self.users_feature,
-                                                                                                self.items_feature,
-                                                                                                self.num_users,
-                                                                                                self.num_items,
-                                                                                                self.ui_graph_shape,
-                                                                                                n_factors=4,
-                                                                                                pick_=False)
         TL_bundles_feature, TL_item_feature_bundle, _ = self._create_star_routing_embed_with_p(self.bi_graph_h,
                                                                                                     self.bi_graph_t,
                                                                                                     self.bundles_feature,
@@ -286,7 +277,16 @@ class CrossCBR(nn.Module):
                                                                                                     self.bi_graph_shape,
                                                                                                     n_factors=1,
                                                                                                     pick_=False)
-        TL_users_feature, TL_bundles_feature = self.ub_propagate(self.ub_mat, TL_users_feature, TL_bundles_feature)
+        TL_users_feature, TL_bundle_feature_user, _ = self._create_star_routing_embed_with_p(self.ub_graph_h,
+                                                                                                self.ub_graph_t,
+                                                                                                IL_users_feature,
+                                                                                                TL_bundles_feature,
+                                                                                                self.num_users,
+                                                                                                self.num_bundles,
+                                                                                                self.ub_graph_shape,
+                                                                                                n_factors=4,
+                                                                                                pick_=False)                                                                                           
+        #TL_users_feature, TL_bundles_feature = self.ub_propagate(self.ub_mat, TL_users_feature, TL_bundles_feature)
         # if test:
         #     # calculate with no dropout
         #     MI_users_agg = self.aggregate_item(self.ui_aggregate_graph_ori, MI_IL_items_feature)
@@ -295,8 +295,8 @@ class CrossCBR(nn.Module):
         #     # calculate with dropout
         #     MI_users_agg = self.aggregate_item(self.ui_aggregate_graph, MI_IL_items_feature)
         #     MI_bundles_agg = self.aggregate_item(self.bi_aggregate_graph, MI_BL_items_feature)
-        users_feature = [IL_users_feature, BL_users_feature, TL_users_feature]
-        bundles_feature = [IL_bundles_feature, BL_bundles_feature, TL_bundles_feature]
+        users_feature = [IL_users_feature, TL_users_feature]
+        bundles_feature = [TL_bundles_feature, TL_bundle_feature_user]
 
         return users_feature, bundles_feature
     def aggregate_item(self, agg_graph, i_feature):
@@ -353,16 +353,17 @@ class CrossCBR(nn.Module):
     def cal_loss(self, users_feature, bundles_feature):
         # IL: item_level, BL: bundle_level, TL: Intent-level
         # [bs, 1, emb_size]
-        IL_users_feature, BL_users_feature, TL_users_feature = users_feature
+        IL_users_feature, BL_users_feature = users_feature
         # [bs, 1+neg_num, emb_size]
         
-        IL_bundles_feature, BL_bundles_feature, TL_bundles_feature = bundles_feature
+        IL_bundles_feature, BL_bundles_feature = bundles_feature
         # print(self.normalize_tensor(TL_users_feature), self.normalize_tensor(TL_bundles_feature))
         # [bs, 1+neg_num]
 
+        
+        pred = torch.sum(IL_users_feature * IL_bundles_feature, 2) + torch.sum(BL_users_feature * BL_bundles_feature, 2)
         #Nhan 3 feature
-        # pred = torch.sum(IL_users_feature * IL_bundles_feature, 2) + torch.sum(BL_users_feature * BL_bundles_feature, 2) + torch.sum(TL_users_feature * TL_bundles_feature, 2)
-        pred = torch.sum((torch.cat(((IL_users_feature), (BL_users_feature), (TL_users_feature)),2)* torch.cat(((IL_bundles_feature),(BL_bundles_feature),(TL_bundles_feature)),2)),2)
+        # pred = torch.sum((torch.cat(((IL_users_feature), (BL_users_feature), (TL_users_feature)),2)* torch.cat(((IL_bundles_feature),(BL_bundles_feature),(TL_bundles_feature)),2)),2)
 
         bpr_loss = cal_bpr_loss(pred)
 
@@ -579,8 +580,8 @@ class CrossCBR(nn.Module):
 
     def evaluate(self, propagate_result, users):
         users_feature, bundles_feature = propagate_result
-        users_feature_atom, users_feature_non_atom, tl_users_feature = [i[users] for i in users_feature]
-        bundles_feature_atom, bundles_feature_non_atom, tl_bundles_feature = bundles_feature
+        users_feature_atom, users_feature_non_atom= [i[users] for i in users_feature]
+        bundles_feature_atom, bundles_feature_non_atom = bundles_feature
 
-        scores = torch.mm(users_feature_atom, bundles_feature_atom.t()) + torch.mm(users_feature_non_atom, bundles_feature_non_atom.t()) + torch.mm(tl_users_feature, tl_bundles_feature.t())
+        scores = torch.mm(users_feature_atom, bundles_feature_atom.t()) + torch.mm(users_feature_non_atom, bundles_feature_non_atom.t())
         return scores
