@@ -128,23 +128,32 @@ class Datasets():
 
 
     def get_bi(self):
-        with open(os.path.join(self.path, self.name, 'bundle_item.txt'), 'r') as f:
-            b_i_pairs = list(map(lambda s: tuple(int(i) for i in s[:-1].split('\t')), f.readlines()))
-
+        # with open(os.path.join(self.path, self.name, 'bundle_item.txt'), 'r') as f:
+        #     b_i_pairs = list(map(lambda s: tuple(int(i) for i in s[:-1].split('\t')), f.readlines()))
+        with open(os.path.join(self.path, self.name, 'bundle_item.csv'), 'r', newline='') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+            next(reader, None)
+            b_i_pairs = list(map(lambda row: (int(row[0]), int(row[1])), reader))
+        
         indice = np.array(b_i_pairs, dtype=np.int32)
+        print(indice.shape)
         values = np.ones(len(b_i_pairs), dtype=np.float32)
+        print(len(values))
         b_i_graph = sp.coo_matrix(
             (values, (indice[:, 0], indice[:, 1])), shape=(self.num_bundles, self.num_items)).tocsr()
-
+        print(b_i_graph.shape)
         print_statistics(b_i_graph, 'B-I statistics')
 
         return b_i_graph
 
 
     def get_ui(self):
-        with open(os.path.join(self.path, self.name, 'user_item.txt'), 'r') as f:
-            u_i_pairs = list(map(lambda s: tuple(int(i) for i in s[:-1].split('\t')), f.readlines()))
-
+        # with open(os.path.join(self.path, self.name, 'user_item.txt'), 'r') as f:
+        #     u_i_pairs = list(map(lambda s: tuple(int(i) for i in s[:-1].split('\t')), f.readlines()))
+        with open(os.path.join(self.path, self.name, 'user_item.csv'), 'r', newline='') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+            next(reader, None)
+            u_i_pairs = list(map(lambda row: (int(row[0]), int(row[1])), reader))
         indice = np.array(u_i_pairs, dtype=np.int32)
         values = np.ones(len(u_i_pairs), dtype=np.float32)
         u_i_graph = sp.coo_matrix( 
@@ -156,9 +165,12 @@ class Datasets():
 
 
     def get_ub(self, task):
-        with open(os.path.join(self.path, self.name, 'user_bundle_{}.txt'.format(task)), 'r') as f:
-            u_b_pairs = list(map(lambda s: tuple(int(i) for i in s[:-1].split('\t')), f.readlines()))
-
+        # with open(os.path.join(self.path, self.name, 'user_bundle_{}.txt'.format(task)), 'r') as f:
+        #     u_b_pairs = list(map(lambda s: tuple(int(i) for i in s[:-1].split('\t')), f.readlines()))
+        with open(os.path.join(self.path, self.name, 'user_bundle_{}.csv'.format(task)), 'r', newline='') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',')
+            next(reader, None)
+            u_b_pairs = list(map(lambda row: (int(row[0]), int(row[1])), reader))
         indice = np.array(u_b_pairs, dtype=np.int32)
         values = np.ones(len(u_b_pairs), dtype=np.float32)
         u_b_graph = sp.coo_matrix(
