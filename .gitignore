@@ -1,6 +1,6 @@
 *.o
 *.dSYM
-*.csv
+# *.csv
 *.out
 *.jpg
 *.pyc
