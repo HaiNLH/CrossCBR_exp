@@ -115,7 +115,7 @@ food:
   MIDGN_weight: 1
 
 
-  clothing:
+clothing:
   data_path: '.\datasets'
   batch_size_train: 2048 # the batch size for training
   batch_size_test: 2048 # the batch size for testing
