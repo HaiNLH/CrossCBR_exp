@@ -135,23 +135,19 @@ def main():
                     ED_drop = True
                 bpr_loss, c_loss = model(batch, ED_drop=ED_drop)
                 loss = bpr_loss + conf["c_lambda"] * c_loss
-                # print('this is new: ')
-                # print(loss)
-            
                 loss.backward()
                 optimizer.step()
 
-                # loss_scalar = loss.detach()
-                # bpr_loss_scalar = bpr_loss.detach()
-                # c_loss_scalar = c_loss.detach()
-                # run.add_scalar("loss_bpr", bpr_loss_scalar, batch_anchor)
-                # run.add_scalar("loss_c", c_loss_scalar, batch_anchor)
-                # run.add_scalar("loss", loss_scalar, batch_anchor)
+                loss_scalar = loss.detach()
+                bpr_loss_scalar = bpr_loss.detach()
+                c_loss_scalar = c_loss.detach()
+                run.add_scalar("loss_bpr", bpr_loss_scalar, batch_anchor)
+                run.add_scalar("loss_c", c_loss_scalar, batch_anchor)
+                run.add_scalar("loss", loss_scalar, batch_anchor)
 
-                pbar.set_description("epoch: %d, loss: %.4f" %(epoch, loss))
+                pbar.set_description("epoch: %d, loss: %.4f, bpr_loss: %.4f, c_loss: %.4f" %(epoch, loss_scalar, bpr_loss_scalar, c_loss_scalar))
 
-                if (batch_anchor+1) % test_interval_bs == 0:
-                    print('\n')
+                if (batch_anchor+1) % test_interval_bs == 0:  
                     metrics = {}
                     metrics["val"] = test(model, dataset.val_loader, conf)
                     metrics["test"] = test(model, dataset.test_loader, conf)
@@ -259,7 +255,7 @@ def get_metrics(metrics, grd, pred, topks):
     for topk in topks:
         _, col_indice = torch.topk(pred, topk)
         row_indice = torch.zeros_like(col_indice) + torch.arange(pred.shape[0], device=pred.device, dtype=torch.long).view(-1, 1)
-        is_hit = grd[row_indice.view(-1).to(grd.device), col_indice.view(-1).to(grd.device)].view(-1, topk)
+        is_hit = grd[row_indice.view(-1), col_indice.view(-1)].view(-1, topk)
 
         tmp["recall"][topk] = get_recall(pred, grd, is_hit, topk)
         tmp["ndcg"][topk] = get_ndcg(pred, grd, is_hit, topk)

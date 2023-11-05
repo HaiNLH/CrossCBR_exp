@@ -8,7 +8,7 @@ import scipy.sparse as sp
 
 
 def cal_bpr_loss(pred):
-    pred: [bs, 1+neg_num]
+    # pred: [bs, 1+neg_num]
     if pred.shape[1] > 2:
         negs = pred[:, 1:]
         pos = pred[:, 0].unsqueeze(1).expand_as(negs)
@@ -17,11 +17,8 @@ def cal_bpr_loss(pred):
         pos = pred[:, 0].unsqueeze(1)
 
     loss = - torch.log(torch.sigmoid(pos - negs)) # [bs]
-    loss = torch.sum(loss)
+    loss = torch.mean(loss)
 
-    #from BGCN
-    # loss = -torch.log(torch.sigmoid(pred[:,0] - pred[:,1]))
-    
     return loss
 
 
@@ -214,7 +211,7 @@ class CrossCBR(nn.Module):
             BL_users_feature, BL_bundles_feature = self.one_propagate(self.bundle_level_graph_ori, self.users_feature, self.bundles_feature, self.bundle_level_dropout, test)
         else:
             BL_users_feature, BL_bundles_feature = self.one_propagate(self.bundle_level_graph, self.users_feature, self.bundles_feature, self.bundle_level_dropout, test)
-        # ============================= multi intent propagation =============================
+
         users_feature = [IL_users_feature, BL_users_feature]
         bundles_feature = [IL_bundles_feature, BL_bundles_feature]
 
@@ -238,12 +235,7 @@ class CrossCBR(nn.Module):
         c_loss = - torch.mean(torch.log(pos_score / ttl_score))
 
         return c_loss
-    def predict(self, users_feature, bundles_feature):
-        users_feature_atom, users_feature_non_atom, = users_feature
-        bundles_feature_atom, bundles_feature_non_atom = bundles_feature
-        pred = torch.sum(users_feature_atom * bundles_feature_atom,2) \
-            + torch.sum(users_feature_non_atom * bundles_feature_non_atom,2)
-        return pred
+
 
     def cal_loss(self, users_feature, bundles_feature):
         # IL: item_level, BL: bundle_level
@@ -253,7 +245,6 @@ class CrossCBR(nn.Module):
         IL_bundles_feature, BL_bundles_feature = bundles_feature
         # [bs, 1+neg_num]
         pred = torch.sum(IL_users_feature * IL_bundles_feature, 2) + torch.sum(BL_users_feature * BL_bundles_feature, 2)
-        # pred = self.predict(users_feature, bundles_feature)
         bpr_loss = cal_bpr_loss(pred)
 
         # cl is abbr. of "contrastive loss"
@@ -283,17 +274,14 @@ class CrossCBR(nn.Module):
         bundles_embedding = [i[bundles] for i in bundles_feature]
 
         bpr_loss, c_loss = self.cal_loss(users_embedding, bundles_embedding)
-        #hard_loss = self.regularize(users_embedding, bundles_embedding)
 
         return bpr_loss, c_loss
 
-    #Hard negative
 
     def evaluate(self, propagate_result, users):
         users_feature, bundles_feature = propagate_result
         users_feature_atom, users_feature_non_atom = [i[users] for i in users_feature]
         bundles_feature_atom, bundles_feature_non_atom = bundles_feature
 
-        scores = torch.mm(users_feature_atom, bundles_feature_atom.t()) \
-            + torch.mm(users_feature_non_atom, bundles_feature_non_atom.t())
+        scores = torch.mm(users_feature_atom, bundles_feature_atom.t()) + torch.mm(users_feature_non_atom, bundles_feature_non_atom.t())
         return scores
