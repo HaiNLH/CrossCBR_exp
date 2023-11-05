@@ -82,7 +82,7 @@ iFashion:
   test_interval: 5 
 
 food:
-  data_path: '.\datasets'
+  data_path: './datasets'
   batch_size_train: 2048 # the batch size for training
   batch_size_test: 2048 # the batch size for testing
   topk: [10, 20, 40, 80] # the topks metrics for evaluation
@@ -116,7 +116,7 @@ food:
 
 
 clothing:
-  data_path: '.\datasets'
+  data_path: './datasets'
   batch_size_train: 2048 # the batch size for training
   batch_size_test: 2048 # the batch size for testing
   topk: [10, 20, 40, 80] # the topks metrics for evaluation
@@ -149,7 +149,7 @@ clothing:
   MIDGN_weight: 1
 
 electronic:
-  data_path: '.\datasets'
+  data_path: './datasets'
   batch_size_train: 2048 # the batch size for training
   batch_size_test: 2048 # the batch size for testing
   topk: [10, 20, 40, 80] # the topks metrics for evaluation
