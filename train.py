@@ -20,7 +20,7 @@ def get_cmd():
     parser = argparse.ArgumentParser()
     # experimental settings
     parser.add_argument("-g", "--gpu", default="0", type=str, help="which gpu to use")
-    parser.add_argument("-d", "--dataset", default="Youshu", type=str, help="which dataset to use, options: NetEase, Youshu, iFashion")
+    parser.add_argument("-d", "--dataset", default="food", type=str, help="which dataset to use, options: NetEase, Youshu, iFashion")
     parser.add_argument("-m", "--model", default="CrossCBR", type=str, help="which model to use, options: CrossCBR")
     parser.add_argument("-i", "--info", default="", type=str, help="any auxilary info that will be appended to the log file name")
     args = parser.parse_args()
@@ -296,10 +296,10 @@ def get_ndcg(pred, grd, is_hit, topk):
     for i in range(1, topk+1):
         IDCGs[i] = IDCG(i, topk, device)
 
-    num_pos = grd.sum(dim=1).clamp(0, topk).to(torch.long)
+    num_pos = grd.sum(dim=1).clamp(0, topk).to(torch.long).to('cpu')
     dcg = DCG(is_hit, topk, device)
 
-    idcg = IDCGs[num_pos]
+    idcg = IDCGs[num_pos].to('cpu')
     ndcg = dcg/idcg.to(device)
 
     denorm = pred.shape[0] - (num_pos == 0).sum().item()

@@ -84,6 +84,7 @@ class Datasets():
         batch_size_test = conf['batch_size_test']
 
         self.num_users, self.num_bundles, self.num_items = self.get_data_size()
+        print("num_users: %d, num_bundles: %d, num_items: %d" %(self.num_users, self.num_bundles, self.num_items))
 
         b_i_graph = self.get_bi()
         u_i_pairs, u_i_graph = self.get_ui()
