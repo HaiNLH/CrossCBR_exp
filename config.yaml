@@ -89,9 +89,9 @@ food:
   num_layerss: [1] # number of layers for the infomation progagation over the item- and bundle-level graphs
 
   # the following dropout rates are with respect to the "aug_type", i.e., if aug_type is ED, the following dropout rates are for ED.
-  item_level_ratios: [0] # the dropout ratio for item-view graph
-  bundle_level_ratios: [0] # the dropout ratio for bundle-view graph
-  bundle_agg_ratios: [0] # the dropout ratio for bundle-item affiliation graph
+  item_level_ratios: [0.1] # the dropout ratio for item-view graph
+  bundle_level_ratios: [0.1] # the dropout ratio for bundle-view graph
+  bundle_agg_ratios: [0.1] # the dropout ratio for bundle-item affiliation graph
 
   lrs: [1.0e-2] # learning rate
   l2_regs: [1.0e-3] # the l2 regularization weight: lambda_2
