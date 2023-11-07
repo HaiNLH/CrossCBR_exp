@@ -3,7 +3,6 @@
 
 import os
 import random
-import csv
 import numpy as np
 import scipy.sparse as sp 
 
@@ -38,37 +37,14 @@ class BundleTrainDataset(Dataset):
         conf = self.conf
         user_b, pos_bundle = self.u_b_pairs[index]
         all_bundles = [pos_bundle]
+
         while True:
             i = np.random.randint(self.num_bundles)
             if self.u_b_graph[user_b, i] == 0 and not i in all_bundles:                                                          
                 all_bundles.append(i)                                                                                                   
                 if len(all_bundles) == self.neg_sample+1:                                                                               
-                    break
-        # hard_probability = round(np.random.uniform(0, 1), 1)
-        # if  hard_probability <= conf['hard_prob'][0]:
-        #     while True:
-        #         i = np.random.randint(self.u_b_for_neg_sample.shape[1])
-        #         b_n1 = self.u_b_for_neg_sample[user_b, i]
-        #         if self.u_b_graph[user_b, b_n1] == 0 and not b_n1 in all_bundles:
-        #             all_bundles.append(b_n1)
-        #             if len(all_bundles) == self.neg_sample+1:
-        #                 break
-        # elif conf['hard_prob'][0] < hard_probability \
-        #     <= conf['hard_prob'][0] + conf['hard_prob'][1]:
-        #     while True:
-        #         i = np.random.randint(self.b_b_for_neg_sample.shape[1])
-        #         b_n2 = self.b_b_for_neg_sample[pos_bundle, i]
-        #         if self.u_b_graph[user_b, b_n2] == 0 and not b_n2 in all_bundles:
-        #             all_bundles.append(b_n2)
-        #             if len(all_bundles) == self.neg_sample+1:
-        #                 break
-        # else:
-        #     while True:
-        #         i = np.random.randint(self.num_bundles)
-        #         if self.u_b_graph[user_b, i] == 0 and not i in all_bundles:
-        #             all_bundles.append(i)
-        #             if len(all_bundles) == self.neg_sample+1:
-        #                 break
+                    break                                                                                                               
+
         return torch.LongTensor([user_b]), torch.LongTensor(all_bundles)
 
 
@@ -108,7 +84,6 @@ class Datasets():
         batch_size_test = conf['batch_size_test']
 
         self.num_users, self.num_bundles, self.num_items = self.get_data_size()
-        print(self.num_users, self.num_bundles, self.num_items)
 
         b_i_graph = self.get_bi()
         u_i_pairs, u_i_graph = self.get_ui()
@@ -117,7 +92,7 @@ class Datasets():
         u_b_pairs_val, u_b_graph_val = self.get_ub("tune")
         u_b_pairs_test, u_b_graph_test = self.get_ub("test")
 
-        u_b_for_neg_sample, b_b_for_neg_sample = self.get_aux_graph(u_i_graph, b_i_graph, conf)
+        u_b_for_neg_sample, b_b_for_neg_sample = None, None
 
         self.bundle_train_data = BundleTrainDataset(conf, u_b_pairs_train, u_b_graph_train, self.num_bundles, u_b_for_neg_sample, b_b_for_neg_sample, conf["neg_num"])
         self.bundle_val_data = BundleTestDataset(u_b_pairs_val, u_b_graph_val, u_b_graph_train, self.num_users, self.num_bundles)
@@ -138,46 +113,38 @@ class Datasets():
             return [int(s) for s in f.readline().split('\t')][:3]
 
 
-    def get_aux_graph(self, u_i_graph, b_i_graph, conf):
-        u_b_from_i = u_i_graph @ b_i_graph.T
-        u_b_from_i = u_b_from_i.todense()
-        bn1_window = [int(i*self.num_bundles) for i in conf['hard_window']]
-        u_b_for_neg_sample = np.argsort(u_b_from_i, axis=1)[:, bn1_window[0]:bn1_window[1]]
+    # def get_aux_graph(self, u_i_graph, b_i_graph, conf):
+    #     u_b_from_i = u_i_graph @ b_i_graph.T
+    #     u_b_from_i = u_b_from_i.todense()
+    #     bn1_window = [int(i*self.num_bundles) for i in conf['hard_window']]
+    #     u_b_for_neg_sample = np.argsort(u_b_from_i, axis=1)[:, bn1_window[0]:bn1_window[1]]
 
-        b_b_from_i = b_i_graph @ b_i_graph.T
-        b_b_from_i = b_b_from_i.todense()
-        bn2_window = [int(i*self.num_bundles) for i in conf['hard_window']]
-        b_b_for_neg_sample = np.argsort(b_b_from_i, axis=1)[:, bn2_window[0]:bn2_window[1]]
+    #     b_b_from_i = b_i_graph @ b_i_graph.T
+    #     b_b_from_i = b_b_from_i.todense()
+    #     bn2_window = [int(i*self.num_bundles) for i in conf['hard_window']]
+    #     b_b_for_neg_sample = np.argsort(b_b_from_i, axis=1)[:, bn2_window[0]:bn2_window[1]]
 
-        return u_b_for_neg_sample, b_b_for_neg_sample
+    #     return u_b_for_neg_sample, b_b_for_neg_sample
+
 
     def get_bi(self):
-        # with open(os.path.join(self.path, self.name, 'bundle_item.txt'), 'r') as f:
-        #     b_i_pairs = list(map(lambda s: tuple(int(i) for i in s[:-1].split('\t')), f.readlines()))
-        with open(os.path.join(self.path, self.name, 'bundle_item.csv'), 'r', newline='') as csvfile:
-            reader = csv.reader(csvfile, delimiter=',')
-            next(reader, None)
-            b_i_pairs = list(map(lambda row: (int(row[0]), int(row[1])), reader))
-        
+        with open(os.path.join(self.path, self.name, 'bundle_item.txt'), 'r') as f:
+            b_i_pairs = list(map(lambda s: tuple(int(i) for i in s[:-1].split('\t')), f.readlines()))
+
         indice = np.array(b_i_pairs, dtype=np.int32)
-        print(indice.shape)
         values = np.ones(len(b_i_pairs), dtype=np.float32)
-        print(len(values))
         b_i_graph = sp.coo_matrix(
             (values, (indice[:, 0], indice[:, 1])), shape=(self.num_bundles, self.num_items)).tocsr()
-        print(b_i_graph.shape)
+
         print_statistics(b_i_graph, 'B-I statistics')
 
         return b_i_graph
 
 
     def get_ui(self):
-        # with open(os.path.join(self.path, self.name, 'user_item.txt'), 'r') as f:
-        #     u_i_pairs = list(map(lambda s: tuple(int(i) for i in s[:-1].split('\t')), f.readlines()))
-        with open(os.path.join(self.path, self.name, 'user_item.csv'), 'r', newline='') as csvfile:
-            reader = csv.reader(csvfile, delimiter=',')
-            next(reader, None)
-            u_i_pairs = list(map(lambda row: (int(row[0]), int(row[1])), reader))
+        with open(os.path.join(self.path, self.name, 'user_item.txt'), 'r') as f:
+            u_i_pairs = list(map(lambda s: tuple(int(i) for i in s[:-1].split('\t')), f.readlines()))
+
         indice = np.array(u_i_pairs, dtype=np.int32)
         values = np.ones(len(u_i_pairs), dtype=np.float32)
         u_i_graph = sp.coo_matrix( 
@@ -189,12 +156,9 @@ class Datasets():
 
 
     def get_ub(self, task):
-        # with open(os.path.join(self.path, self.name, 'user_bundle_{}.txt'.format(task)), 'r') as f:
-        #     u_b_pairs = list(map(lambda s: tuple(int(i) for i in s[:-1].split('\t')), f.readlines()))
-        with open(os.path.join(self.path, self.name, 'user_bundle_{}.csv'.format(task)), 'r', newline='') as csvfile:
-            reader = csv.reader(csvfile, delimiter=',')
-            next(reader, None)
-            u_b_pairs = list(map(lambda row: (int(row[0]), int(row[1])), reader))
+        with open(os.path.join(self.path, self.name, 'user_bundle_{}.txt'.format(task)), 'r') as f:
+            u_b_pairs = list(map(lambda s: tuple(int(i) for i in s[:-1].split('\t')), f.readlines()))
+
         indice = np.array(u_b_pairs, dtype=np.int32)
         values = np.ones(len(u_b_pairs), dtype=np.float32)
         u_b_graph = sp.coo_matrix(
