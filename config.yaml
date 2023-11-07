@@ -98,6 +98,7 @@ iFashion_sample:
 
   epochs: 50
   test_interval: 5 
+  MIDGN_weight: 1
 
 
 food:
@@ -126,6 +127,7 @@ food:
 
   epochs: 100 # number of epochs to train
   test_interval: 5
+  MIDGN_weight: 1
 electronic:
   data_path: './datasets'
   batch_size_train: 128 # the batch size for training
@@ -149,9 +151,10 @@ electronic:
   l2_regs: [1.0e-4] # the l2 regularization weight: lambda_2
   c_lambdas: [0.04] # the contrastive loss weight: lambda_1
   c_temps: [0.25] # the temperature in the contrastive loss: tau
-
+  MIDGN_weight: 1
   epochs: 100 # number of epochs to train
   test_interval: 5 # by how many epochs to run the validation and testing.
+
 clothing:
   data_path: './datasets'
   batch_size_train: 128 # the batch size for training
@@ -178,3 +181,4 @@ clothing:
 
   epochs: 100 # number of epochs to train
   test_interval: 5 # by how many epochs to run the validation and testing.
+  MIDGN_weight: 1
